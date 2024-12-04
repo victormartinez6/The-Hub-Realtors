@@ -9,6 +9,12 @@
   from = "/*"
   to = "/index.html"
   status = 200
+  force = true
+
+[[headers]]
+  for = "/*"
+    [headers.values]
+    Access-Control-Allow-Origin = "*"
 
 [context.production.environment]
   VITE_FIREBASE_API_KEY = "AIzaSyDU9a8RwVUMTggsJozOgO2lKA2I15PEPuI"
