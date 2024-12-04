@@ -16,7 +16,7 @@ import PaymentStatusManagement from '../views/settings/PaymentStatusManagement.v
 import MyAccount from '../views/MyAccount.vue'
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory('/'),
   routes: [
     {
       path: '/login',
