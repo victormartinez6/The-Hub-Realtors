@@ -62,7 +62,6 @@ export const useForexStore = defineStore('forex', {
             }
 
             const currentRate = parseFloat(data.ask);
-            const previousRate = this.lastRates[currency] || currentRate;
             const previousDayRate = this.previousDayRates[currency];
             
             const changeToday = previousDayRate 
