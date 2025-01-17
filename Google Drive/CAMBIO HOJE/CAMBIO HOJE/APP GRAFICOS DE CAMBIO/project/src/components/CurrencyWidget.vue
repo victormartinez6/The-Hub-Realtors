@@ -43,6 +43,7 @@ const currencies = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY'];
 const previousRates = ref<Record<string, number>>({});
 const sparklineData = ref<Record<string, any>>({});
 const weeklyVariation = ref<Record<string, number>>({});
+const updateInterval = ref<ReturnType<typeof setInterval> | null>(null);
 
 // Mapa de bandeiras de alta qualidade
 const flags: Record<string, string> = {
@@ -57,6 +58,13 @@ const flags: Record<string, string> = {
 
 const getFlagPath = (currency: string) => {
   return flags[currency] || flags.default;
+};
+
+const handleImageError = (e: Event) => {
+  const target = e.target as HTMLImageElement;
+  if (target && target.src !== flags.default) {
+    target.src = flags.default;
+  }
 };
 
 const sparklineOptions = {
@@ -255,10 +263,7 @@ onUnmounted(() => {
                      :alt="`Bandeira ${getCurrencyName(currency)}`" 
                      class="w-full h-full object-cover"
                      loading="lazy"
-                     @error="(e) => {
-                       console.error('Erro ao carregar bandeira:', e.target.src);
-                       e.target.src = flags.default;
-                     }">
+                     @error="handleImageError">
               </div>
               <div>
                 <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">{{ currency }}/BRL</h2>
