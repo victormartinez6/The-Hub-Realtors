@@ -6,6 +6,12 @@ import { resolve } from 'path'
 export default defineConfig({
   plugins: [vue()],
   base: '/',
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, './src'),
+      '@public': resolve(__dirname, './public')
+    }
+  },
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
@@ -16,12 +22,10 @@ export default defineConfig({
       },
       output: {
         assetFileNames: (assetInfo) => {
-          const info = assetInfo.name.split('.')
-          const extType = info[info.length - 1]
-          if (/\.(png|jpe?g|svg|gif|tiff|bmp|ico)$/i.test(assetInfo.name)) {
-            return `assets/images/[name]-[hash][extname]`
+          if (assetInfo.name && /\.(svg)$/i.test(assetInfo.name)) {
+            return 'assets/flags/[name][extname]'
           }
-          return `assets/[name]-[hash][extname]`
+          return 'assets/[name]-[hash][extname]'
         },
         chunkFileNames: 'assets/js/[name]-[hash].js',
         entryFileNames: 'assets/js/[name]-[hash].js',

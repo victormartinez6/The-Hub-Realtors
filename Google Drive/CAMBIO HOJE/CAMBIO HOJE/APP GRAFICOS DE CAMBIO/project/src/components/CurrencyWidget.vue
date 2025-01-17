@@ -38,6 +38,14 @@ ChartJS.register(
   Legend
 );
 
+import usdFlag from '../../public/flags/usd.svg';
+import eurFlag from '../../public/flags/eur.svg';
+import gbpFlag from '../../public/flags/gbp.svg';
+import cadFlag from '../../public/flags/cad.svg';
+import audFlag from '../../public/flags/aud.svg';
+import jpyFlag from '../../public/flags/jpy.svg';
+import defaultFlag from '../../public/flags/default.svg';
+
 const forexStore = useForexStore();
 const currencies = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY'];
 const previousRates = ref<Record<string, number>>({});
@@ -46,13 +54,13 @@ const weeklyVariation = ref<Record<string, number>>({});
 
 // Mapa de bandeiras de alta qualidade
 const flags: Record<string, string> = {
-  USD: '/flags/usd.svg',
-  EUR: '/flags/eur.svg',
-  GBP: '/flags/gbp.svg',
-  CAD: '/flags/cad.svg',
-  AUD: '/flags/aud.svg',
-  JPY: '/flags/jpy.svg',
-  default: '/flags/default.svg'
+  USD: usdFlag,
+  EUR: eurFlag,
+  GBP: gbpFlag,
+  CAD: cadFlag,
+  AUD: audFlag,
+  JPY: jpyFlag,
+  default: defaultFlag
 };
 
 const getFlagPath = (currency: string) => {
