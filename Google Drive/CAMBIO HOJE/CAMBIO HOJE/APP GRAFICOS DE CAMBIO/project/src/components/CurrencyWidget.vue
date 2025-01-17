@@ -1,49 +1,14 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, computed } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useForexStore } from '../stores/forex';
-import type { ForexRate } from '../types/forex';
 import { Line } from 'vue-chartjs';
-import { 
-  format, 
-  formatDistance, 
-  formatRelative, 
-  subDays, 
-  addDays, 
-  startOfWeek, 
-  endOfWeek, 
-  startOfMonth, 
-  endOfMonth, 
-  startOfYear, 
-  endOfYear 
-} from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-} from 'chart.js';
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
 
 const forexStore = useForexStore();
 const currencies = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY'];
-const previousRates = ref<Record<string, number>>({});
-const sparklineData = ref<Record<string, any>>({});
-const weeklyVariation = ref<Record<string, number>>({});
 const updateInterval = ref<ReturnType<typeof setInterval> | null>(null);
+const sparklineData = ref<Record<string, any>>({});
 
 // Mapa de bandeiras de alta qualidade
 const flags: Record<string, string> = {
@@ -67,167 +32,54 @@ const handleImageError = (e: Event) => {
   }
 };
 
-const sparklineOptions = {
+// Configuração do gráfico
+const chartOptions = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
-    legend: { display: false },
+    legend: {
+      display: false
+    },
     tooltip: {
       enabled: true,
-      mode: 'index',
+      mode: 'index' as const,
       intersect: false,
       callbacks: {
-        label: function(context: any) {
-          const value = context.raw.toFixed(4);
-          const date = format(new Date(context.dataset.dates[context.dataIndex]), "dd/MM", { locale: ptBR });
-          return `${date}: R$ ${value}`;
+        label: (context: any) => {
+          return `R$ ${context.parsed.y.toFixed(4)}`;
         }
       }
     }
   },
   scales: {
-    x: { 
+    x: {
       display: true,
       grid: {
-        display: true,
-        drawBorder: true,
-        color: 'rgba(0, 0, 0, 0.1)'
-      },
-      ticks: {
-        display: true,
-        callback: function(value: any, index: number) {
-          return index % 2 === 0 ? format(new Date(this.chart.data.datasets[0].dates[index]), "dd/MM", { locale: ptBR }) : '';
-        }
+        display: false
       }
     },
-    y: { 
+    y: {
       display: true,
-      position: 'right',
       grid: {
-        display: true,
-        drawBorder: true,
-        color: 'rgba(0, 0, 0, 0.1)'
-      },
-      ticks: {
-        display: true,
-        callback: function(value: any) {
-          return `R$ ${value.toFixed(2)}`;
-        }
+        display: true
       }
     }
   },
   elements: {
-    point: { 
-      radius: 3,
-      hoverRadius: 5 
+    point: {
+      radius: 0
     },
-    line: { 
-      borderWidth: 2,
-      tension: 0.1
+    line: {
+      tension: 0.4
     }
   },
   interaction: {
     intersect: false,
-    mode: 'index'
+    mode: 'index' as const
   }
 };
 
-let ratesInterval: number;
-let chartInterval: number;
-
-const startRealtimeUpdates = () => {
-  // Primeira atualização imediata
-  updateRates();
-  updateSparklines();
-  
-  // Atualização das taxas a cada 3 segundos
-  ratesInterval = setInterval(async () => {
-    updateRates();
-  }, 3000);
-
-  // Atualização dos gráficos a cada minuto
-  chartInterval = setInterval(async () => {
-    updateSparklines();
-  }, 60000);
-};
-
-const stopRealtimeUpdates = () => {
-  if (ratesInterval) {
-    clearInterval(ratesInterval);
-  }
-  if (chartInterval) {
-    clearInterval(chartInterval);
-  }
-};
-
-const updateRates = async () => {
-  console.log('Atualizando taxas:', new Date().toLocaleTimeString());
-  await forexStore.fetchRates();
-};
-
-const getRateDirection = (currency: string): string => {
-  const rate = forexStore.getRate(currency);
-  if (!rate) return 'neutral';
-  
-  const change = rate.change24h;
-  if (change > 0) return 'up';
-  if (change < 0) return 'down';
-  return 'neutral';
-};
-
-const getDirectionArrow = (direction: string) => {
-  switch (direction) {
-    case 'up':
-      return '↑';
-    case 'down':
-      return '↓';
-    default:
-      return '→';
-  }
-};
-
-const calculateWeeklyVariation = (data: number[]): number => {
-  if (data.length < 2) return 0;
-  const firstValue = data[data.length - 1];
-  const lastValue = data[0];
-  return ((lastValue - firstValue) / firstValue) * 100;
-};
-
-const updateSparklines = async () => {
-  for (const currency of currencies) {
-    const data = await forexStore.fetchSparklineData(currency);
-    if (data.length > 0) {
-      const variation = calculateWeeklyVariation(data);
-      weeklyVariation.value[currency] = variation;
-      
-      const dates = Array.from({ length: data.length }, (_, i) => {
-        const date = new Date();
-        date.setDate(date.getDate() - (data.length - 1 - i));
-        return date.getTime();
-      });
-
-      sparklineData.value[currency] = {
-        labels: dates.map(date => format(date, "dd/MM", { locale: ptBR })),
-        datasets: [{
-          data,
-          dates,
-          borderColor: variation >= 0 ? '#10b981' : '#ef4444',
-          tension: 0.1,
-          fill: true,
-          backgroundColor: (context: any) => {
-            const ctx = context.chart.ctx;
-            const gradient = ctx.createLinearGradient(0, 0, 0, 200);
-            gradient.addColorStop(0, variation >= 0 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)');
-            gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-            return gradient;
-          }
-        }]
-      };
-    }
-  }
-};
-
-function getCurrencyName(currency: string): string {
+const getCurrencyName = (currency: string): string => {
   const names: Record<string, string> = {
     USD: 'Dólar Americano',
     EUR: 'Euro',
@@ -237,103 +89,86 @@ function getCurrencyName(currency: string): string {
     JPY: 'Iene Japonês'
   };
   return names[currency] || currency;
-}
+};
 
-onMounted(async () => {
-  await updateRates();
-  await updateSparklines();
-  startRealtimeUpdates();
+const formatCurrency = (value: number): string => {
+  return value.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  });
+};
+
+const getVariationClass = (variation: number): string => {
+  return variation > 0 ? 'text-green-600' : variation < 0 ? 'text-red-600' : 'text-gray-600';
+};
+
+const formatVariation = (variation: number): string => {
+  const sign = variation > 0 ? '+' : '';
+  return `${sign}${variation.toFixed(2)}%`;
+};
+
+// Lifecycle hooks
+onMounted(() => {
+  forexStore.fetchRates();
+  updateInterval.value = setInterval(() => {
+    forexStore.fetchRates();
+  }, 60000);
 });
 
 onUnmounted(() => {
-  stopRealtimeUpdates();
+  if (updateInterval.value) {
+    clearInterval(updateInterval.value);
+  }
 });
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div v-for="currency in currencies" :key="currency" 
-           class="bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden">
-        <div class="p-6">
-          <div class="flex justify-between items-start mb-4">
-            <div class="flex items-center space-x-3">
-              <div class="w-12 h-12 rounded-full overflow-hidden shadow-md border-2 border-gray-100 dark:border-gray-700 flex items-center justify-center bg-white">
-                <img :src="getFlagPath(currency)"
-                     :alt="`Bandeira ${getCurrencyName(currency)}`" 
-                     class="w-full h-full object-cover"
-                     loading="lazy"
-                     @error="handleImageError">
-              </div>
-              <div>
-                <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">{{ currency }}/BRL</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400">{{ getCurrencyName(currency) }}</p>
-              </div>
-            </div>
-            <p class="text-4xl font-bold tracking-tight tabular-nums transition-colors duration-300 flex items-center" 
-               :class="[
-                 getRateDirection(currency) === 'up' ? 'text-green-600 dark:text-green-400' : 
-                 getRateDirection(currency) === 'down' ? 'text-red-600 dark:text-red-400' : 
-                 'text-gray-900 dark:text-white'
-               ]">
-              R$ {{ forexStore.getRate(currency)?.rate.toFixed(4) || '0.0000' }}
-              <span class="ml-2 text-2xl">
-                {{ getDirectionArrow(getRateDirection(currency)) }}
-              </span>
-            </p>
-          </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+    <div v-for="currency in currencies" :key="currency" 
+         class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 hover:shadow-xl transition-shadow duration-300">
+      <div class="flex items-center space-x-4 mb-4">
+        <div class="w-12 h-12 relative overflow-hidden rounded-full border-2 border-gray-200">
+          <img :src="getFlagPath(currency)" 
+               :alt="`Bandeira ${getCurrencyName(currency)}`" 
+               class="w-full h-full object-cover"
+               loading="lazy"
+               @error="handleImageError">
+        </div>
+        <div>
+          <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">{{ currency }}/BRL</h2>
+          <p class="text-sm text-gray-500 dark:text-gray-400">{{ getCurrencyName(currency) }}</p>
+        </div>
+      </div>
 
-          <div class="flex flex-col gap-6 mb-8">
-            <!-- Variação 24h -->
-            <div 
-              class="flex items-center justify-between px-6 py-4 rounded-lg shadow-lg w-full"
-              :class="[
-                'transition-all duration-300',
-                forexStore.getRate(currency)?.change24h >= 0 ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
-              ]"
-            >
-              <div class="text-3xl font-bold">
-                {{ forexStore.getRate(currency)?.change24h >= 0 ? '+' : '' }}{{ forexStore.getRate(currency)?.change24h.toFixed(2) }}%
-              </div>
-              <div class="text-xl font-medium">24 HORAS</div>
-            </div>
-
-            <!-- Variação 7D -->
-            <div 
-              class="flex items-center justify-between px-6 py-4 rounded-lg shadow-lg w-full"
-              :class="[
-                'transition-all duration-300',
-                weeklyVariation[currency] >= 0 ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
-              ]"
-            >
-              <div class="text-3xl font-bold">
-                {{ weeklyVariation[currency] >= 0 ? '+' : '' }}{{ weeklyVariation[currency]?.toFixed(2) }}%
-              </div>
-              <div class="text-xl font-medium">7 DIAS</div>
-            </div>
+      <div class="space-y-2">
+        <div class="flex justify-between items-baseline">
+          <span class="text-3xl font-bold text-gray-900 dark:text-white">
+            {{ formatCurrency(forexStore.rates[currency]?.rate || 0) }}
+          </span>
+          <div class="flex flex-col items-end">
+            <span :class="getVariationClass(forexStore.rates[currency]?.change24h || 0)">
+              {{ formatVariation(forexStore.rates[currency]?.change24h || 0) }}
+            </span>
+            <span class="text-xs text-gray-500">24h</span>
           </div>
+        </div>
 
-          <div class="h-48">
-            <Line
-              v-if="sparklineData[currency]"
-              :data="sparklineData[currency]"
-              :options="sparklineOptions"
-              class="h-full w-full"
-            />
-          </div>
+        <div class="h-20">
+          <Line
+            v-if="sparklineData[currency]"
+            :data="sparklineData[currency]"
+            :options="chartOptions"
+          />
+        </div>
+
+        <div class="text-xs text-gray-500 dark:text-gray-400 text-right">
+          Última atualização: {{ 
+            forexStore.rates[currency]?.timestamp 
+              ? format(new Date(forexStore.rates[currency].timestamp * 1000), 'HH:mm:ss', { locale: ptBR })
+              : '--:--:--'
+          }}
         </div>
       </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.max-w-7xl {
-  max-width: 1920px;
-  margin: 0 auto;
-}
-
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
-}
-</style>
