@@ -38,14 +38,6 @@ ChartJS.register(
   Legend
 );
 
-import usdFlag from '../../public/flags/usd.svg';
-import eurFlag from '../../public/flags/eur.svg';
-import gbpFlag from '../../public/flags/gbp.svg';
-import cadFlag from '../../public/flags/cad.svg';
-import audFlag from '../../public/flags/aud.svg';
-import jpyFlag from '../../public/flags/jpy.svg';
-import defaultFlag from '../../public/flags/default.svg';
-
 const forexStore = useForexStore();
 const currencies = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY'];
 const previousRates = ref<Record<string, number>>({});
@@ -54,13 +46,13 @@ const weeklyVariation = ref<Record<string, number>>({});
 
 // Mapa de bandeiras de alta qualidade
 const flags: Record<string, string> = {
-  USD: usdFlag,
-  EUR: eurFlag,
-  GBP: gbpFlag,
-  CAD: cadFlag,
-  AUD: audFlag,
-  JPY: jpyFlag,
-  default: defaultFlag
+  USD: 'https://raw.githubusercontent.com/victormartinez6/Graficos-Cambio-Hoje/master/public/flags/usd.svg',
+  EUR: 'https://raw.githubusercontent.com/victormartinez6/Graficos-Cambio-Hoje/master/public/flags/eur.svg',
+  GBP: 'https://raw.githubusercontent.com/victormartinez6/Graficos-Cambio-Hoje/master/public/flags/gbp.svg',
+  CAD: 'https://raw.githubusercontent.com/victormartinez6/Graficos-Cambio-Hoje/master/public/flags/cad.svg',
+  AUD: 'https://raw.githubusercontent.com/victormartinez6/Graficos-Cambio-Hoje/master/public/flags/aud.svg',
+  JPY: 'https://raw.githubusercontent.com/victormartinez6/Graficos-Cambio-Hoje/master/public/flags/jpy.svg',
+  default: 'https://raw.githubusercontent.com/victormartinez6/Graficos-Cambio-Hoje/master/public/flags/default.svg'
 };
 
 const getFlagPath = (currency: string) => {
