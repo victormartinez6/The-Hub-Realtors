@@ -46,12 +46,12 @@ const weeklyVariation = ref<Record<string, number>>({});
 
 // Mapa de bandeiras de alta qualidade
 const flags: Record<string, string> = {
-  USD: 'https://flagcdn.com/w80/us.png',
-  EUR: 'https://flagcdn.com/w80/eu.png',
-  GBP: 'https://flagcdn.com/w80/gb.png',
-  CAD: 'https://flagcdn.com/w80/ca.png',
-  AUD: 'https://flagcdn.com/w80/au.png',
-  JPY: 'https://flagcdn.com/w80/jp.png',
+  USD: '/flags/usd.svg',
+  EUR: '/flags/eur.svg',
+  GBP: '/flags/gbp.svg',
+  CAD: '/flags/cad.svg',
+  AUD: '/flags/aud.svg',
+  JPY: '/flags/jpy.svg',
   default: '/flags/default.svg'
 };
 
