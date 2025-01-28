@@ -10,15 +10,16 @@
   },
   "dependencies": {
     "@headlessui/vue": "^1.7.19",
-    "@heroicons/vue": "^2.1.1",
+    "@heroicons/vue": "^2.2.0",
     "@jitsi/vue-sdk": "^1.0.4",
     "@tailwindcss/forms": "^0.5.7",
     "@types/lodash": "^4.17.14",
     "@types/uuid": "^10.0.0",
     "axios": "^1.7.9",
-    "chart.js": "^4.4.1",
+    "chart.js": "^4.4.7",
     "date-fns": "^4.1.0",
     "firebase": "^10.14.1",
+    "imask": "^7.6.1",
     "libphonenumber-js": "^1.11.18",
     "lodash": "^4.17.21",
     "nouislider": "^15.8.1",
@@ -27,6 +28,7 @@
     "vue": "^3.5.10",
     "vue-chartjs": "^5.3.0",
     "vue-router": "^4.3.0",
+    "vue-toastification": "^1.7.14",
     "vuedraggable": "^4.1.0"
   },
   "devDependencies": {

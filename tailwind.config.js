@@ -50,7 +50,20 @@ export default {
           error: '#ef4444',      // Vermelho
           info: '#3b76ff',       // Azul
         }
-      }
+      },
+      animation: {
+        'glow': 'glow 2s ease-in-out infinite alternate',
+      },
+      keyframes: {
+        glow: {
+          'from': {
+            'box-shadow': '0 0 10px #6366f1, 0 0 20px #6366f1, 0 0 30px #6366f1',
+          },
+          'to': {
+            'box-shadow': '0 0 20px #6366f1, 0 0 30px #6366f1, 0 0 40px #6366f1',
+          },
+        },
+      },
     },
   },
   plugins: [

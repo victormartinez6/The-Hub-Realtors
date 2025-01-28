@@ -1,6 +1,7 @@
 import { collection, doc, addDoc, updateDoc, deleteDoc, getDocs, query, orderBy, getDoc, where } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { FileAttachment } from './fileService';
+import { webhookService } from './webhookService';
 
 const COLLECTION_NAME = 'leads';
 const leadsCollection = collection(db, COLLECTION_NAME);
@@ -115,6 +116,11 @@ export const leadService = {
         ...docSnap.data()
       } as Lead;
 
+      // Disparar webhook (não bloqueia a operação principal)
+      webhookService.trigger('lead.created', createdLead).catch(error => {
+        console.error('Erro ao disparar webhook:', error);
+      });
+
       console.log('Lead criado com sucesso, dados completos:', createdLead);
       return createdLead;
     } catch (error) {
@@ -156,6 +162,11 @@ export const leadService = {
         id: updatedDoc.id,
         ...updatedDoc.data()
       } as Lead;
+
+      // Disparar webhook (não bloqueia a operação principal)
+      webhookService.trigger('lead.updated', updatedLead).catch(error => {
+        console.error('Erro ao disparar webhook:', error);
+      });
 
       console.log('Lead atualizado com sucesso:', updatedLead);
       return updatedLead;
@@ -239,6 +250,24 @@ export const leadService = {
     } catch (error) {
       console.error('Erro ao verificar existência do lead:', error);
       return false;
+    }
+  },
+
+  async getLead(id: string): Promise<Lead> {
+    try {
+      const docRef = doc(leadsCollection, id);
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        throw new Error('Lead não encontrado');
+      }
+      const lead = {
+        id: docSnap.id,
+        ...docSnap.data()
+      } as Lead;
+      return lead;
+    } catch (error) {
+      console.error('Error in getLead:', error);
+      throw error;
     }
   },
 };

@@ -40,6 +40,17 @@ const routes: RouteRecordRaw[] = [
     path: '/settings',
     component: () => import('../views/Settings.vue'),
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/currency-exchange',
+    component: () => import('../views/CurrencyExchange.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/webhooks',
+    name: 'webhooks',
+    component: () => import('../views/Webhooks.vue'),
+    meta: { requiresAuth: true }
   }
 ];
 
