@@ -7,7 +7,8 @@
       "src": "package.json",
       "use": "@vercel/static-build",
       "config": {
-        "zeroConfig": true
+        "zeroConfig": true,
+        "nodeVersion": "18.x"
       }
     }
   ],
