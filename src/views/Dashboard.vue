@@ -32,7 +32,7 @@
       <!-- Gráfico Principal -->
       <div class="lg:col-span-2 bg-white rounded-2xl p-6 border border-[#01FBA1]/30 shadow-sm">
         <div class="flex items-center justify-between mb-6">
-          <h2 class="text-xl font-bold text-gray-900">Performance de Vendas</h2>
+          <h2 class="text-xl font-bold text-gray-900">{{ authStore.userRole === 'broker' ? 'Performance da Equipe' : 'Performance de Vendas' }}</h2>
           <div class="flex items-center space-x-4">
             <button v-for="period in periods" 
                     :key="period"
@@ -40,8 +40,8 @@
                     :class="[
                       'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300',
                       activePeriod === period 
-                        ? 'bg-primary-600 text-white' 
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-primary-50'
+                        ? 'bg-[#012928] text-white' 
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-[#01FBA1]/10'
                     ]">
               {{ period }}
             </button>
@@ -56,9 +56,11 @@
       <div class="flex flex-col space-y-6">
         <!-- Card de Leads -->
         <div class="bg-white rounded-2xl p-6 border border-[#01FBA1]/30 shadow-sm">
-          <h3 class="text-lg font-bold text-gray-900 mb-4">Leads Recentes</h3>
+          <h3 class="text-lg font-bold text-gray-900 mb-4">
+            {{ authStore.userRole === 'partner' ? 'Leads Indicados' : 'Leads Recentes' }}
+          </h3>
           <div class="space-y-4">
-            <div v-for="lead in recentLeads" 
+            <div v-for="lead in dashboardData.recentLeads" 
                  :key="lead.id" 
                  class="flex items-center space-x-4 p-3 rounded-xl border border-transparent hover:border-[#01FBA1] transition-all duration-300">
               <div class="w-10 h-10 rounded-full bg-[#01FBA1]/10 flex items-center justify-center text-[#01FBA1] font-bold">
@@ -66,7 +68,13 @@
               </div>
               <div class="flex-1">
                 <h4 class="text-gray-900 font-medium">{{ lead.name }}</h4>
-                <p class="text-gray-500 text-sm">{{ lead.email }}</p>
+                <p class="text-gray-500 text-sm">{{ lead.interest }}</p>
+                <p v-if="authStore.userRole === 'broker' && lead.assignedTo" class="text-xs text-gray-400">
+                  Atribuído para: {{ lead.assignedTo }}
+                </p>
+                <p v-if="authStore.userRole === 'partner' && lead.brokerName" class="text-xs text-gray-400">
+                  Broker: {{ lead.brokerName }}
+                </p>
               </div>
               <span :class="[
                 'px-2 py-1 rounded-full text-xs font-medium',
@@ -78,26 +86,76 @@
           </div>
         </div>
 
-        <!-- Card de Alertas -->
-        <div class="bg-white rounded-2xl p-6 border border-[#01FBA1]/30 shadow-sm">
-          <h3 class="text-lg font-bold text-gray-900 mb-4">Alertas Ativos</h3>
+        <!-- Card de Performance da Equipe (apenas para Broker) -->
+        <div v-if="authStore.userRole === 'broker'" class="bg-white rounded-2xl p-6 border border-[#01FBA1]/30 shadow-sm">
+          <h3 class="text-lg font-bold text-gray-900 mb-4">Performance da Equipe</h3>
           <div class="space-y-4">
-            <div v-for="alert in activeAlerts" 
-                 :key="alert.id" 
+            <div v-for="member in dashboardData.teamPerformance" 
+                 :key="member.realtorId" 
                  class="p-4 rounded-xl bg-white border border-[#01FBA1]/20 hover:border-[#01FBA1] transition-all duration-300">
               <div class="flex items-center justify-between mb-2">
-                <span class="text-primary-700 font-medium">{{ alert.pair }}</span>
-                <span class="text-gray-500 text-sm">{{ alert.date }}</span>
-              </div>
-              <div class="flex items-center justify-between">
-                <span class="text-gray-700">Taxa Alvo: {{ alert.targetRate }}</span>
-                <span :class="[
-                  'px-2 py-1 rounded-full text-xs font-medium',
-                  alert.type === 'above' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                ]">
-                  {{ alert.type === 'above' ? '↑ Acima' : '↓ Abaixo' }}
+                <span class="font-medium text-gray-900">{{ member.realtorName }}</span>
+                <span class="text-sm text-gray-500">
+                  {{ new Date(member.lastActivity).toLocaleDateString('pt-BR') }}
                 </span>
               </div>
+              <div class="grid grid-cols-3 gap-4 mt-2">
+                <div>
+                  <p class="text-xs text-gray-500">Leads</p>
+                  <p class="font-medium">{{ member.leadsCount }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500">Conversões</p>
+                  <p class="font-medium">{{ member.conversions }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500">Comissão</p>
+                  <p class="font-medium">R$ {{ (member.commission / 1000).toFixed(1) }}K</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card de Próximos Eventos -->
+        <div v-if="['broker', 'realtor'].includes(authStore.userRole)" class="bg-white rounded-2xl p-6 border border-[#01FBA1]/30 shadow-sm">
+          <h3 class="text-lg font-bold text-gray-900 mb-4">Próximos Eventos</h3>
+          <div class="space-y-4">
+            <div v-for="event in dashboardData.upcomingEvents" 
+                 :key="event.id" 
+                 class="p-4 rounded-xl bg-white border border-[#01FBA1]/20 hover:border-[#01FBA1] transition-all duration-300">
+              <div class="flex items-center justify-between mb-2">
+                <span class="font-medium text-gray-900">{{ event.title }}</span>
+                <span class="text-sm text-[#01FBA1]">{{ event.time }}</span>
+              </div>
+              <div class="flex items-center space-x-2 text-sm text-gray-500">
+                <span>{{ new Date(event.date).toLocaleDateString('pt-BR') }}</span>
+                <span>•</span>
+                <span class="capitalize">{{ event.type }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card de Propriedades Recentes (apenas para Broker e Realtor) -->
+        <div v-if="['broker', 'realtor'].includes(authStore.userRole)" class="bg-white rounded-2xl p-6 border border-[#01FBA1]/30 shadow-sm">
+          <h3 class="text-lg font-bold text-gray-900 mb-4">Propriedades Recentes</h3>
+          <div class="grid grid-cols-2 gap-4">
+            <div v-for="property in dashboardData.recentProperties" 
+                 :key="property.id" 
+                 class="group relative rounded-xl overflow-hidden">
+              <img :src="property.image" :alt="property.title" class="w-full h-32 object-cover">
+              <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent group-hover:from-black/80 transition-all duration-300"></div>
+              <div class="absolute bottom-0 left-0 right-0 p-3 text-white">
+                <h4 class="text-sm font-medium truncate">{{ property.title }}</h4>
+                <p class="text-xs">R$ {{ (property.price / 1000000).toFixed(1) }}M</p>
+              </div>
+              <span :class="[
+                'absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-medium',
+                property.status === 'ativo' ? 'bg-green-500 text-white' : 'bg-yellow-500 text-white'
+              ]">
+                {{ property.status }}
+              </span>
             </div>
           </div>
         </div>
@@ -105,7 +163,7 @@
     </div>
 
     <!-- Seção de Atividades -->
-    <div class="activity-section p-6">
+    <div class="activity-section p-6" v-if="dashboardData.recentActivities?.length">
       <div class="bg-white rounded-2xl p-6 border border-[#01FBA1]/30 shadow-sm">
         <div class="flex items-center justify-between mb-6">
           <h2 class="text-xl font-bold text-gray-900">Atividades Recentes</h2>
@@ -114,7 +172,7 @@
           </button>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div v-for="activity in recentActivities" 
+          <div v-for="activity in dashboardData.recentActivities" 
                :key="activity.id" 
                class="p-4 rounded-xl bg-white border border-[#01FBA1]/20 hover:border-[#01FBA1] transition-all duration-300">
             <div class="flex items-start space-x-4">
@@ -135,167 +193,186 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import Chart from 'chart.js/auto';
-import {
-  UserGroupIcon,
-  CurrencyDollarIcon,
-  ChartBarIcon,
-  BellIcon,
-  CheckCircleIcon,
-  ClockIcon,
-  UserIcon
-} from '@heroicons/vue/24/outline';
+import { useAuthStore } from '../stores/auth';
+import router from '../router';
 
-// Dados mockados
-const mainStats = [
-  {
-    title: 'Total de Leads',
-    value: '2,543',
-    trend: 12.5,
-    icon: UserGroupIcon
-  },
-  {
-    title: 'Vendas do Mês',
-    value: 'R$ 125K',
-    trend: 8.2,
-    icon: CurrencyDollarIcon
-  },
-  {
-    title: 'Taxa de Conversão',
-    value: '18.2%',
-    trend: -2.4,
-    icon: ChartBarIcon
-  },
-  {
-    title: 'Alertas Ativos',
-    value: '156',
-    trend: 5.7,
-    icon: BellIcon
+const authStore = useAuthStore();
+const isLoading = ref(true);
+const error = ref(null);
+
+// Dados do dashboard
+const dashboardData = ref({
+  stats: null,
+  recentLeads: [],
+  teamPerformance: [],
+  upcomingEvents: [],
+  recentProperties: [],
+  recentActivities: []
+});
+
+// Estatísticas principais baseadas no tipo de usuário
+const mainStats = computed(() => {
+  if (!dashboardData.value.stats) return [];
+
+  const stats = dashboardData.value.stats;
+  const baseStats = [
+    {
+      title: 'Total de Leads',
+      value: stats.totalLeads.toString(),
+      trend: ((stats.newLeadsThisMonth / stats.totalLeads) * 100) || 0,
+      icon: UserGroupIcon
+    },
+    {
+      title: 'Taxa de Conversão',
+      value: `${stats.conversionRate}%`,
+      trend: stats.conversionRate - (stats.lastMonthConversionRate || 0),
+      icon: ChartBarIcon
+    }
+  ];
+
+  // Stats específicos para cada role
+  if (authStore.userRole === 'broker') {
+    return [
+      ...baseStats,
+      {
+        title: 'Imóveis Ativos',
+        value: stats.activeProperties.toString(),
+        trend: ((stats.newProperties / stats.activeProperties) * 100) || 0,
+        icon: HomeIcon
+      },
+      {
+        title: 'Comissão Mensal',
+        value: `R$ ${(stats.monthlyCommission / 1000).toFixed(1)}K`,
+        trend: stats.commissionTrend,
+        icon: CurrencyDollarIcon
+      }
+    ];
+  } else if (authStore.userRole === 'realtor') {
+    return [
+      ...baseStats,
+      {
+        title: 'Leads Ativos',
+        value: stats.activeLeads.toString(),
+        trend: ((stats.newLeadsThisMonth / stats.activeLeads) * 100) || 0,
+        icon: UserIcon
+      },
+      {
+        title: 'Comissão Mensal',
+        value: `R$ ${(stats.monthlyCommission / 1000).toFixed(1)}K`,
+        trend: stats.commissionTrend,
+        icon: CurrencyDollarIcon
+      }
+    ];
+  } else { // partner
+    return [
+      ...baseStats,
+      {
+        title: 'Leads Indicados',
+        value: stats.referredLeads.toString(),
+        trend: ((stats.newReferredLeads / stats.referredLeads) * 100) || 0,
+        icon: DocumentTextIcon
+      },
+      {
+        title: 'Comissão Mensal',
+        value: `R$ ${(stats.monthlyCommission / 1000).toFixed(1)}K`,
+        trend: stats.commissionTrend,
+        icon: CurrencyDollarIcon
+      }
+    ];
   }
-];
+});
+
+// Carregar dados do dashboard
+const loadDashboardData = async () => {
+  try {
+    isLoading.value = true;
+    error.value = null;
+
+    // Carregar estatísticas baseadas no tipo de usuário
+    const stats = await dashboardService.getStats(
+      authStore.userId,
+      authStore.userRole
+    );
+    dashboardData.value.stats = stats;
+
+    // Carregar leads recentes
+    const recentLeads = await dashboardService.getRecentLeads(
+      authStore.userId,
+      authStore.userRole
+    );
+    dashboardData.value.recentLeads = recentLeads;
+
+    // Se for broker, carregar performance da equipe
+    if (authStore.userRole === 'broker') {
+      const teamPerformance = await dashboardService.getTeamPerformance(
+        authStore.userId
+      );
+      dashboardData.value.teamPerformance = teamPerformance;
+    }
+
+    // Carregar eventos próximos
+    const upcomingEvents = await dashboardService.getUpcomingEvents(
+      authStore.userId,
+      authStore.userRole
+    );
+    dashboardData.value.upcomingEvents = upcomingEvents;
+
+    // Carregar propriedades recentes (apenas para broker e realtor)
+    if (['broker', 'realtor'].includes(authStore.userRole)) {
+      const recentProperties = await dashboardService.getRecentProperties(
+        authStore.userId,
+        authStore.userRole
+      );
+      dashboardData.value.recentProperties = recentProperties;
+    }
+
+    // Carregar atividades recentes
+    const recentActivities = await dashboardService.getRecentActivities(
+      authStore.userId,
+      authStore.userRole
+    );
+    dashboardData.value.recentActivities = recentActivities;
+
+  } catch (err) {
+    console.error('Erro ao carregar dados do dashboard:', err);
+    error.value = 'Erro ao carregar dados do dashboard';
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+onMounted(() => {
+  if (authStore.isAdmin) {
+    router.replace('/admin/users');
+  } else {
+    const role = authStore.userRole;
+    if (role === 'broker') {
+      router.replace('/dashboard/broker');
+    } else if (role === 'realtor') {
+      router.replace('/dashboard/realtor');
+    } else if (role === 'partner') {
+      router.replace('/dashboard/partner');
+    } else {
+      loadDashboardData();
+    }
+  }
+});
 
 const periods = ['7D', '30D', '90D', 'YTD'];
 const activePeriod = ref('30D');
 
-const recentLeads = [
-  {
-    id: 1,
-    name: 'João Silva',
-    email: 'joao@email.com',
-    status: 'Novo'
-  },
-  {
-    id: 2,
-    name: 'Maria Santos',
-    email: 'maria@email.com',
-    status: 'Em Progresso'
-  },
-  {
-    id: 3,
-    name: 'Pedro Costa',
-    email: 'pedro@email.com',
-    status: 'Convertido'
-  }
-];
-
-const statusColors = {
-  'Novo': 'bg-blue-100 text-blue-700',
-  'Em Progresso': 'bg-yellow-100 text-yellow-700',
-  'Convertido': 'bg-green-100 text-green-700'
+const setActivePeriod = (period) => {
+  activePeriod.value = period;
+  // Recarregar dados do gráfico baseado no período
 };
 
-const activeAlerts = [
-  {
-    id: 1,
-    pair: 'USD/BRL',
-    targetRate: 'R$ 4,85',
-    type: 'above',
-    date: 'Hoje, 14:30'
-  },
-  {
-    id: 2,
-    pair: 'EUR/BRL',
-    targetRate: 'R$ 5,25',
-    type: 'below',
-    date: 'Hoje, 15:45'
-  }
-];
-
-const recentActivities = [
-  {
-    id: 1,
-    icon: UserIcon,
-    title: 'Novo Lead Cadastrado',
-    description: 'João Silva foi adicionado como novo lead',
-    time: 'Há 5 minutos'
-  },
-  {
-    id: 2,
-    icon: CheckCircleIcon,
-    title: 'Venda Concluída',
-    description: 'Venda de R$ 50.000 para Maria Santos',
-    time: 'Há 2 horas'
-  },
-  {
-    id: 3,
-    icon: ClockIcon,
-    title: 'Alerta Disparado',
-    description: 'USD/BRL atingiu R$ 4,85',
-    time: 'Há 3 horas'
-  }
-];
-
-const salesChart = ref(null);
-
-onMounted(() => {
-  const ctx = salesChart.value.getContext('2d');
-  
-  new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
-      datasets: [{
-        label: 'Vendas',
-        data: [65, 59, 80, 81, 56, 95],
-        borderColor: '#312E81', // primary-900 (dark)
-        backgroundColor: 'rgba(49, 46, 129, 0.1)', // primary-900 com transparência
-        tension: 0.4,
-        fill: true
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: false
-        }
-      },
-      scales: {
-        y: {
-          grid: {
-            color: 'rgba(49, 46, 129, 0.1)' // primary-900 com transparência
-          },
-          ticks: {
-            color: '#312E81' // primary-900
-          }
-        },
-        x: {
-          grid: {
-            color: 'rgba(49, 46, 129, 0.1)' // primary-900 com transparência
-          },
-          ticks: {
-            color: '#312E81' // primary-900
-          }
-        }
-      }
-    }
-  });
-});
-
-const setActivePeriod = (period: string) => {
-  activePeriod.value = period;
+const statusColors = {
+  'Novo': 'bg-blue-100 text-blue-800',
+  'Em Progresso': 'bg-yellow-100 text-yellow-800',
+  'Convertido': 'bg-green-100 text-green-800',
+  'Perdido': 'bg-red-100 text-red-800'
 };
 </script>
 

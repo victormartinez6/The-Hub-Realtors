@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { defineProps, defineEmits, computed, onMounted } from 'vue';
 import { useLeadsStore } from '../stores/leads';
+import { useUserManagementStore } from '../stores/userManagement';
 
 const props = defineProps({
   lead: {
@@ -10,12 +11,22 @@ const props = defineProps({
   showArchiveButton: {
     type: Boolean,
     default: false
+  },
+  userType: {
+    type: String,
+    required: true
   }
 });
 
-onMounted(() => {
+onMounted(async () => {
   console.log('Lead recebido no card:', props.lead);
+  console.log('Assigned Partners:', props.lead.assignedPartners);
   console.log('Valor do imóvel:', props.lead.propertyValue, typeof props.lead.propertyValue);
+  
+  // Carrega os usuários se ainda não foram carregados
+  if (userManagementStore.users.length === 0) {
+    await userManagementStore.fetchUsers();
+  }
 });
 
 const emit = defineEmits([
@@ -23,10 +34,12 @@ const emit = defineEmits([
   'delete',
   'archive',
   'openNotes',
-  'reactivate'
+  'reactivate',
+  'view-files'
 ]);
 
 const leadsStore = useLeadsStore();
+const userManagementStore = useUserManagementStore();
 
 const formatDate = (date: string) => {
   return new Date(date).toLocaleDateString('pt-BR', {
@@ -97,6 +110,20 @@ const getPriorityColor = (priority) => {
 
 const hasNotes = computed(() => props.lead.notes && props.lead.notes.length > 0);
 
+const getUserPhotoUrl = (userId) => {
+  const user = userManagementStore.users.find(u => u.id === userId);
+  return user?.photoURL || '/default-avatar.png';
+};
+
+const getUserName = (userId) => {
+  const user = userManagementStore.users.find(u => u.id === userId);
+  if (!user) {
+    console.warn(`Usuário não encontrado para o ID: ${userId}`);
+    return 'Carregando...';
+  }
+  return user.displayName || user.email || 'Sem nome';
+};
+
 const deleteLead = async () => {
   if (confirm('Tem certeza que deseja excluir este lead?')) {
     try {
@@ -133,17 +160,18 @@ const formatPhoneDisplay = (countryCode: string, phone: string) => {
         <h3 class="text-base font-medium text-gray-900 truncate">
           {{ lead.name }}
         </h3>
-        <!-- Botão de observações -->
-        <button
-          @click.stop="$emit('open-notes', lead)"
-          class="p-1.5 text-gray-400 hover:text-indigo-600 transition-colors duration-200 rounded-full hover:bg-indigo-50"
-          :class="{ 'text-indigo-600 bg-indigo-50': hasNotes }"
-          :title="hasNotes ? 'Ver observações' : 'Sem observações'"
-        >
-          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-        </button>
+        <div class="flex items-center space-x-2">
+          <button
+            @click.stop="$emit('open-notes', lead)"
+            class="p-1.5 text-gray-400 hover:text-indigo-600 transition-colors duration-200 rounded-full hover:bg-indigo-50"
+            :class="{ 'text-indigo-600 bg-indigo-50': hasNotes }"
+            :title="hasNotes ? 'Ver observações' : 'Sem observações'"
+          >
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </button>
+        </div>
       </div>
       <span class="text-xs px-2 py-1 rounded-full inline-block mt-1" :class="getPriorityColor(lead.priority)">
         {{ lead.priority }}
@@ -151,7 +179,7 @@ const formatPhoneDisplay = (countryCode: string, phone: string) => {
     </div>
 
     <!-- Informações de contato -->
-    <div class="space-y-2 mb-6">
+    <div class="space-y-2 mb-4">
       <!-- Valor do Imóvel -->
       <div class="flex items-center text-sm text-gray-600">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -182,6 +210,55 @@ const formatPhoneDisplay = (countryCode: string, phone: string) => {
           {{ formatPhoneDisplay(lead.countryCode, lead.phone) }}
         </a>
       </div>
+
+      <!-- Usuários compartilhados -->
+      <div class="pt-2" v-if="(userType !== 'partner' && lead.assignedPartners?.length > 0) || (userType === 'partner' && (lead.realtorId || lead.brokerId || lead.assignedRealtors?.length > 0))">
+        <div class="flex items-center gap-2">
+          <svg class="h-4 w-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+          </svg>
+          <div class="flex items-center -space-x-2">
+            <!-- Para partners: mostrar broker e realtor -->
+            <template v-if="userType === 'partner'">
+              <div v-if="lead.brokerId" class="relative group">
+                <img
+                  :src="getUserPhotoUrl(lead.brokerId)"
+                  :alt="getUserName(lead.brokerId)"
+                  class="w-8 h-8 rounded-full border-2 border-white object-cover"
+                >
+                <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 whitespace-nowrap transition-opacity duration-200">
+                  Broker: {{ getUserName(lead.brokerId) }}
+                </div>
+              </div>
+              <template v-if="lead.assignedRealtors && lead.assignedRealtors.length > 0">
+                <div v-for="realtorId in lead.assignedRealtors" :key="realtorId" class="relative group">
+                  <img
+                    :src="getUserPhotoUrl(realtorId)"
+                    :alt="getUserName(realtorId)"
+                    class="w-8 h-8 rounded-full border-2 border-white object-cover"
+                  >
+                  <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 whitespace-nowrap transition-opacity duration-200">
+                    Realtor: {{ getUserName(realtorId) }}
+                  </div>
+                </div>
+              </template>
+            </template>
+            <!-- Para realtor/broker: mostrar partners -->
+            <template v-else>
+              <div v-for="partnerId in lead.assignedPartners" :key="partnerId" class="relative group">
+                <img
+                  :src="getUserPhotoUrl(partnerId)"
+                  :alt="getUserName(partnerId)"
+                  class="w-8 h-8 rounded-full border-2 border-white object-cover"
+                >
+                <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 whitespace-nowrap transition-opacity duration-200">
+                  {{ getUserName(partnerId) }}
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Rodapé com ícones de ação -->
@@ -191,6 +268,7 @@ const formatPhoneDisplay = (countryCode: string, phone: string) => {
         Criado em: {{ formatDate(lead.createdAt) }}
       </div>
 
+      <!-- Botões -->
       <div class="flex space-x-2">
         <!-- Botão de editar -->
         <button
@@ -203,21 +281,8 @@ const formatPhoneDisplay = (countryCode: string, phone: string) => {
           </svg>
         </button>
 
-        <!-- Botão de reativar (apenas para leads arquivados) -->
-        <button
-          v-if="lead.archived"
-          @click.stop="$emit('reactivate', lead)"
-          class="p-1.5 text-green-600 hover:text-green-900 transition-colors duration-200 rounded-full hover:bg-green-50"
-          title="Reativar lead"
-        >
-          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-        </button>
-
-        <!-- Botão de arquivar (apenas para leads não arquivados) -->
-        <button
-          v-if="!lead.archived && showArchiveButton"
+        <!-- Botão de arquivar -->
+        <button v-if="!lead.archived"
           @click.stop="$emit('archive', lead)"
           class="p-1.5 text-gray-400 hover:text-yellow-600 transition-colors duration-200 rounded-full hover:bg-yellow-50"
           title="Arquivar lead"
@@ -227,14 +292,14 @@ const formatPhoneDisplay = (countryCode: string, phone: string) => {
           </svg>
         </button>
 
-        <!-- Botão de excluir -->
-        <button
-          @click.stop="deleteLead"
-          class="p-1.5 text-gray-400 hover:text-red-600 transition-colors duration-200 rounded-full hover:bg-red-50"
-          title="Excluir lead"
+        <!-- Botão de reativar (para leads arquivados) -->
+        <button v-if="lead.archived"
+          @click.stop="$emit('reactivate', lead)"
+          class="p-1.5 text-gray-400 hover:text-green-600 transition-colors duration-200 rounded-full hover:bg-green-50"
+          title="Reativar lead"
         >
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
         </button>
       </div>

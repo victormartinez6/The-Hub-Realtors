@@ -3,32 +3,44 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useLeadsStore } from '../stores/leads';
 import { useAuthStore } from '../stores/auth';
 import { useKanbanStore } from '../stores/kanban';
+import { useUserManagementStore } from '../stores/userManagement';
 import { useRouter } from 'vue-router';
 import { auth } from '../firebase/config';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 import Modal from '../components/Modal.vue';
 import LeadForm from '../components/LeadForm.vue';
 import LeadKanban from '../components/LeadKanban.vue';
 import ConfirmationModal from '../components/ConfirmationModal.vue';
 import FileUploader from '../components/FileUploader.vue';
+import PartnerSelect from '../components/PartnerSelect.vue'; // Importar o componente PartnerSelect
+import RealtorSelect from '../components/RealtorSelect.vue'; // Importar o componente RealtorSelect
 import { uploadFile, deleteFile, formatFileSize } from '../services/fileService';
 import { getStorage, ref as storageRef } from 'firebase/storage';
+import { leadService } from '../services/leadService';
 
 const router = useRouter();
 const authStore = useAuthStore();
 const leadsStore = useLeadsStore();
 const kanbanStore = useKanbanStore();
+const userManagementStore = useUserManagementStore();
+
 const searchQuery = ref('');
 const selectedStatus = ref('all');
 const selectedPriority = ref('all');
 const selectedSource = ref('all');
+const selectedRealtors = ref([]);
+const selectedPartners = ref<string[]>([]);
+const partnerSearchQuery = ref('');
+const leadSearchQuery = ref(''); // Adicionada variável de busca
 const valueRange = ref({
   min: 0,
   max: 10000000
 });
 const showFilters = ref(false);
 const showModal = ref(false);
-const editingLead = ref(null);
 const isEditMode = ref(false);
+const editingLead = ref(null);
 const viewMode = ref('kanban');
 const showNotesModal = ref(false);
 const selectedLead = ref(null);
@@ -83,6 +95,19 @@ const filteredLeads = computed(() => {
       (lead.propertyValue >= valueRange.value.min && lead.propertyValue <= valueRange.value.max);
     
     return matchesSearch && matchesStatus && matchesPriority && matchesSource && matchesValue;
+  });
+});
+
+// Computed para filtrar leads baseado na busca
+const filteredLeadsBySearch = computed(() => {
+  const query = leadSearchQuery.value.toLowerCase().trim();
+  if (!query) return filteredLeads.value;
+  
+  return filteredLeads.value.filter(lead => {
+    const name = (lead.name || '').toLowerCase();
+    const email = (lead.email || '').toLowerCase();
+    const phone = (lead.phone || '').toLowerCase();
+    return name.includes(query) || email.includes(query) || phone.includes(query);
   });
 });
 
@@ -144,12 +169,64 @@ const formatCurrency = (value) => {
 const openNewLeadModal = () => {
   isEditMode.value = false;
   editingLead.value = null;
+  selectedPartners.value = [];
   showModal.value = true;
+
+  // Carregar usuários se for realtor ou broker
+  if (authStore.userRole === 'realtor' || authStore.userRole === 'broker') {
+    userManagementStore.fetchUsers();
+  }
 };
 
-const openEditLeadModal = (lead) => {
+const openEditLeadModal = async (lead) => {
   isEditMode.value = true;
-  editingLead.value = { ...lead };
+
+  // Garantir que os usuários sejam carregados antes de abrir o modal
+  if (authStore.userRole === 'realtor' || authStore.userRole === 'broker') {
+    await userManagementStore.fetchUsers();
+  }
+
+  // Garantir que os arrays de realtors e partners sejam sempre arrays válidos
+  const assignedRealtors = Array.isArray(lead.assignedRealtors) ? lead.assignedRealtors : [];
+  const assignedPartners = Array.isArray(lead.assignedPartners) ? lead.assignedPartners : [];
+  const familyMembers = Array.isArray(lead.familyMembers) ? lead.familyMembers : [];
+
+  // Log para debug
+  console.log('[openEditLeadModal] Lead original:', lead);
+
+  // Carregar todos os dados do lead para edição
+  editingLead.value = {
+    id: lead.id,
+    name: lead.name || '',
+    email: lead.email || '',
+    phone: lead.phone || '',
+    propertyType: lead.propertyType || '',
+    propertyValue: lead.propertyValue || 100000,
+    countryCode: lead.countryCode || '55',
+    source: lead.source || 'website',
+    priority: lead.priority || 'medium',
+    status: lead.status || 'new',
+    notes: lead.notes || [],
+    attachments: lead.attachments || [],
+    familyMembers: familyMembers,
+    assignedRealtors: assignedRealtors,
+    assignedPartners: assignedPartners,
+    brokerId: lead.brokerId || '',
+    createdBy: lead.createdBy || '',
+    createdAt: lead.createdAt || new Date().toISOString(),
+    updatedAt: lead.updatedAt || new Date().toISOString(),
+    // Outros campos específicos do lead
+    propertyAddress: lead.propertyAddress || '',
+    propertyCity: lead.propertyCity || '',
+    propertyState: lead.propertyState || '',
+    propertyZip: lead.propertyZip || '',
+    propertyDescription: lead.propertyDescription || '',
+    observations: lead.observations || ''
+  };
+
+  console.log('[openEditLeadModal] Lead preparado para edição:', editingLead.value);
+
+  selectedPartners.value = assignedPartners;
   showModal.value = true;
 };
 
@@ -157,6 +234,11 @@ const openNotesModal = (lead) => {
   selectedLead.value = lead;
   showNotesModal.value = true;
   newNote.value = '';
+  
+  // Carregar usuários se ainda não foram carregados
+  if (userManagementStore.users.length === 0) {
+    userManagementStore.fetchUsers();
+  }
 };
 
 const addNote = async () => {
@@ -168,7 +250,7 @@ const addNote = async () => {
     author: authStore.user?.displayName || 'Usuário'
   };
 
-  if (!selectedLead.value.notes) {
+  if (!selectedLead.value?.notes) {
     selectedLead.value.notes = [];
   }
 
@@ -182,56 +264,67 @@ const addNote = async () => {
   }
 };
 
-const handleLeadSubmit = async (leadData) => {
+const handleLeadSubmit = async (leadData: any) => {
   try {
     isSaving.value = true;
-    saveError.value = '';
-
-    // Garantir que propertyValue seja um número e que countryCode esteja presente
-    const processedLeadData = {
-      ...leadData,
-      countryCode: leadData.countryCode || '55',
-      propertyValue: Number(leadData.propertyValue) || 100000,
-      familyMembers: (leadData.familyMembers || []).map(member => ({
-        ...member,
-        countryCode: member.countryCode || '55'
-      }))
-    };
-
-    console.log('Dados do lead processados:', processedLeadData);
-
-    if (isEditMode.value && editingLead.value) {
-      // Atualiza o lead existente
-      const updatedLead = {
-        ...editingLead.value,
-        ...processedLeadData
-      };
-      await leadsStore.updateLead(updatedLead.id, updatedLead);
-    } else if (leadData.id) {
-      // Se o lead já tem ID, significa que é uma reativação
-      await leadsStore.updateLead(leadData.id, {
-        ...processedLeadData,
-        archived: false,
-        status: 'new',
-        kanbanColumn: processedLeadData.kanbanColumn || kanbanStore.sortedColumns[0]?.id
-      });
-    } else {
-      // Adiciona novo lead - deixa o Firestore gerar o ID
-      await leadsStore.addLead({
-        ...processedLeadData,
-        kanbanColumn: processedLeadData.kanbanColumn || kanbanStore.sortedColumns[0]?.id
-      });
-    }
-
-    // Recarregar os leads após adicionar/atualizar
-    await leadsStore.fetchLeads();
     
+    // Se estiver editando, mantém todos os dados originais
+    if (isEditMode.value) {
+      const leadToSave = {
+        ...editingLead.value, // Mantém todos os dados originais
+        ...leadData, // Sobrescreve com os novos dados
+        updatedAt: new Date().toISOString()
+      };
+
+      // Garante que os arrays sejam sempre arrays válidos
+      leadToSave.assignedRealtors = Array.isArray(leadToSave.assignedRealtors) ? leadToSave.assignedRealtors : [];
+      leadToSave.assignedPartners = Array.isArray(leadToSave.assignedPartners) ? leadToSave.assignedPartners : [];
+      leadToSave.familyMembers = Array.isArray(leadToSave.familyMembers) ? leadToSave.familyMembers : [];
+      leadToSave.notes = Array.isArray(leadToSave.notes) ? leadToSave.notes : [];
+      leadToSave.attachments = Array.isArray(leadToSave.attachments) ? leadToSave.attachments : [];
+
+      console.log('[handleLeadSubmit] Atualizando lead:', editingLead.value.id, leadToSave);
+      await leadService.updateLead(editingLead.value.id, leadToSave);
+    } else {
+      // Se for um novo lead
+      const finalData = {
+        ...leadData,
+        assignedPartners: selectedPartners.value,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        notes: [],
+        attachments: [],
+        status: 'new',
+        priority: 'medium'
+      };
+
+      // Se for realtor, busca o broker vinculado a ele
+      if (authStore.userRole === 'realtor') {
+        const userDoc = await getDoc(doc(db, 'users', authStore.user?.uid || ''));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          finalData.brokerId = userData.brokerId || '';
+        }
+      } else if (authStore.userRole === 'broker') {
+        finalData.brokerId = authStore.user?.uid || '';
+      }
+
+      finalData.createdBy = authStore.user?.uid || '';
+
+      // Se for broker, usa os corretores selecionados
+      if (authStore.userRole === 'broker' && finalData.assignedRealtors?.length > 0) {
+        finalData.createdBy = finalData.assignedRealtors[0];
+      }
+
+      console.log('[handleLeadSubmit] Criando novo lead:', finalData);
+      await leadService.addLead(finalData);
+    }
+    
+    // Fecha o modal e atualiza a lista
     showModal.value = false;
-    editingLead.value = null;
-    isEditMode.value = false;
+    await leadsStore.fetchLeads();
   } catch (error) {
     console.error('Erro ao salvar lead:', error);
-    saveError.value = 'Erro ao salvar lead. Por favor, tente novamente.';
   } finally {
     isSaving.value = false;
   }
@@ -273,13 +366,14 @@ const confirmArchive = async () => {
 
 const confirmReactivate = async () => {
   if (leadToReactivate.value) {
-    await leadsStore.updateLead(leadToReactivate.value.id, {
-      ...leadToReactivate.value,
-      archived: false,
-      status: 'new'
-    });
-    showReactivateConfirmation.value = false;
-    leadToReactivate.value = null;
+    try {
+      await leadService.unarchiveLead(leadToReactivate.value.id);
+      await leadsStore.fetchLeads();
+      showReactivateConfirmation.value = false;
+      leadToReactivate.value = null;
+    } catch (error) {
+      console.error('Erro ao reativar lead:', error);
+    }
   }
 };
 
@@ -297,42 +391,47 @@ const resetFilters = () => {
   selectedStatus.value = 'all';
   selectedPriority.value = 'all';
   selectedSource.value = 'all';
+  selectedRealtors.value = [];
+  selectedPartners.value = [];
   valueRange.value = {
     min: 0,
     max: 10000000
   };
+  leadSearchQuery.value = ''; // Limpar busca
 };
 
 const handleFileSelected = async (file: File) => {
-  if (!selectedLead.value?.id || !authStore.user) return;
-
+  if (!selectedLead.value) return;
+  
+  isUploading.value = true;
+  uploadError.value = '';
+  
   try {
-    isUploading.value = true;
-    uploadError.value = '';
-    uploadProgress.value = 0;
+    const attachment = await uploadFile(
+      file,
+      `leads/${selectedLead.value.id}/attachments`,
+      (progress) => {
+        uploadProgress.value = progress;
+      }
+    );
 
-    // Fazer upload do arquivo
-    const folder = `leads/${selectedLead.value.id}/attachments`;
-    const attachment = await uploadFile(file, folder, (progress) => {
-      uploadProgress.value = Math.round(progress);
+    // Atualizar o lead com o novo anexo
+    const currentAttachments = selectedLead.value.attachments || [];
+    const updatedLead = await leadsStore.updateLead(selectedLead.value.id, {
+      attachments: [...currentAttachments, attachment]
     });
 
-    // Criar uma cópia do lead atual
-    const updatedLead = { ...selectedLead.value };
-    
-    // Atualizar a lista de anexos
-    updatedLead.attachments = [...(updatedLead.attachments || []), attachment];
-
-    // Atualizar no Firestore
-    await leadsStore.updateLead(selectedLead.value.id, {
-      attachments: updatedLead.attachments
-    });
-
-    // Atualizar localmente usando a cópia completa
+    // Atualizar o lead no store
     selectedLead.value = updatedLead;
+    
+    // Atualizar a lista de leads
+    const leadIndex = leadsStore.leads.findIndex(l => l.id === updatedLead.id);
+    if (leadIndex !== -1) {
+      leadsStore.leads[leadIndex] = updatedLead;
+    }
   } catch (error) {
-    console.error('Erro ao fazer upload:', error);
-    uploadError.value = 'Erro ao fazer upload do arquivo. Por favor, tente novamente.';
+    console.error('Erro ao fazer upload do arquivo:', error);
+    uploadError.value = 'Erro ao fazer upload do arquivo. Tente novamente.';
   } finally {
     isUploading.value = false;
     uploadProgress.value = 0;
@@ -448,9 +547,24 @@ const deleteObservation = async (observationId: string) => {
 // Carregar leads quando o usuário estiver autenticado
 onMounted(async () => {
   try {
+    // Carregar usuários
+    if (authStore.userRole === 'realtor' || authStore.userRole === 'broker') {
+      await userManagementStore.fetchUsers();
+    }
+
+    // Carregar leads
     await leadsStore.fetchLeads();
   } catch (error) {
-    console.error('Erro ao carregar leads:', error);
+    console.error('Erro ao carregar dados:', error);
+  } finally {
+    isLoading.value = false;
+  }
+});
+
+// Watch para carregar usuários quando necessário
+watch(() => showModal.value, async (newValue) => {
+  if (newValue && (authStore.userRole === 'realtor' || authStore.userRole === 'broker')) {
+    await userManagementStore.fetchUsers();
   }
 });
 
@@ -471,11 +585,118 @@ watch(() => authStore.user, async (user) => {
   }
 
   try {
+    // Carregar usuários
+    if (authStore.userRole === 'realtor' || authStore.userRole === 'broker') {
+      await userManagementStore.fetchUsers();
+    }
+
+    // Carregar leads
     await leadsStore.fetchLeads();
   } catch (error) {
     console.error('Error loading leads:', error);
   }
 }, { immediate: true });
+
+// Watch para atualizar selectedPartners quando editingLead mudar
+watch(editingLead, (newLead) => {
+  if (newLead && newLead.assignedPartners) {
+    selectedPartners.value = [...newLead.assignedPartners];
+  } else {
+    selectedPartners.value = [];
+  }
+});
+
+// Computed properties para filtrar usuários por papel
+const availableRealtors = computed(() => {
+  return userManagementStore.users.filter(user => 
+    user.role === 'realtor' && 
+    user.status === 'active' && 
+    user.brokerId === authStore.user?.uid
+  );
+});
+
+const availablePartners = computed(() => {
+  return userManagementStore.users.filter(user => 
+    user.role === 'partner' && 
+    user.status === 'active'
+  );
+});
+
+// Computed para filtrar parceiros baseado na busca
+const filteredPartners = computed(() => {
+  const query = partnerSearchQuery.value.toLowerCase().trim();
+  if (!query) return availablePartners.value;
+  
+  return availablePartners.value.filter(partner => {
+    const name = (partner.displayName || '').toLowerCase();
+    const email = (partner.email || '').toLowerCase();
+    return name.includes(query) || email.includes(query);
+  });
+});
+
+// Função para alternar parceiros
+const togglePartner = (partnerId: string) => {
+  if (selectedPartners.value.includes(partnerId)) {
+    selectedPartners.value = selectedPartners.value.filter(id => id !== partnerId);
+  } else {
+    selectedPartners.value.push(partnerId);
+  }
+};
+
+// Funções para obter nomes de usuários
+const getBrokerFromRealtor = (realtorId: string) => {
+  const realtor = userManagementStore.users.find(user => user.id === realtorId);
+  if (!realtor?.brokerId) {
+    console.warn('Broker não encontrado para o realtor:', realtorId);
+    return null;
+  }
+  return getBrokerName(realtor.brokerId);
+};
+
+const getBrokerName = (brokerId: string) => {
+  const broker = userManagementStore.users.find(user => user.id === brokerId);
+  if (!broker) {
+    console.warn('Broker não encontrado:', brokerId);
+  }
+  return broker?.displayName || broker?.email || 'Broker não encontrado';
+};
+
+const getRealtorName = (realtorId: string) => {
+  const realtor = userManagementStore.users.find(user => user.id === realtorId);
+  return realtor?.displayName || realtor?.email || 'Corretor não encontrado';
+};
+
+const getPartnerName = (partnerId: string) => {
+  const partner = userManagementStore.users.find(user => user.id === partnerId);
+  return partner?.displayName || partner?.email || 'Parceiro não encontrado';
+};
+
+const newLead = ref({
+  name: '',
+  email: '',
+  phone: '',
+  source: '',
+  status: 'new',
+  priority: 'medium',
+  assignedRealtors: [] as string[],
+  assignedPartners: [] as string[],
+  notes: [] as any[],
+  attachments: [] as any[],
+  brokerId: authStore.user?.uid || '',
+  createdBy: authStore.user?.uid || '',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString()
+});
+
+const userType = computed(() => authStore.currentUser?.role || '');
+
+const showFilesModal = ref(false);
+const selectedLeadFiles = ref(null);
+
+const openFilesModal = (lead) => {
+  selectedLeadFiles.value = lead;
+  showFilesModal.value = true;
+};
 </script>
 
 <template>
@@ -535,13 +756,13 @@ watch(() => authStore.user, async (user) => {
 
             <button
               @click="showFilters = !showFilters"
-              class="ml-3 inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#012928]"
+              class="ml-3 inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#012928] focus:ring-offset-2"
             >
               <svg class="h-5 w-5 mr-2 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
               </svg>
               Filtros
-              <span v-if="selectedStatus !== 'all' || selectedPriority !== 'all' || selectedSource !== 'all' || valueRange.min > 0 || valueRange.max < 10000000" 
+              <span v-if="selectedStatus !== 'all' || selectedPriority !== 'all' || selectedSource !== 'all' || selectedRealtors.length > 0 || selectedPartners.length > 0 || valueRange.min > 0 || valueRange.max < 10000000" 
                 class="ml-1.5 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#012928] text-white"
               >
                 Ativos
@@ -606,6 +827,67 @@ watch(() => authStore.user, async (user) => {
               </select>
             </div>
 
+            <!-- Corretor -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Corretor</label>
+              <select
+                v-model="selectedRealtors"
+                multiple
+                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-[#012928] focus:border-[#012928] sm:text-sm rounded-md"
+              >
+                <option value="all">Todos</option>
+                <option v-for="realtor in availableRealtors" :key="realtor.id" :value="realtor.id">
+                  {{ realtor.name }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Parceiro -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Parceiro</label>
+              <div class="relative rounded-md shadow-sm">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg class="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  v-model="partnerSearchQuery"
+                  class="focus:ring-[#012928] focus:border-[#012928] block w-full pl-8 pr-3 py-1.5 sm:text-sm border-gray-300 rounded-md"
+                  placeholder="Buscar parceiros..."
+                >
+              </div>
+              <select
+                v-model="selectedPartners"
+                multiple
+                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-[#012928] focus:border-[#012928] sm:text-sm rounded-md"
+              >
+                <option value="all">Todos</option>
+                <option v-for="partner in filteredPartners" :key="partner.id" :value="partner.id">
+                  {{ partner.displayName || partner.email }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Busca de Leads -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Buscar Leads</label>
+              <div class="relative rounded-md shadow-sm">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg class="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  v-model="leadSearchQuery"
+                  class="focus:ring-[#012928] focus:border-[#012928] block w-full pl-8 pr-3 py-1.5 sm:text-sm border-gray-300 rounded-md"
+                  placeholder="Buscar leads..."
+                >
+              </div>
+            </div>
+
             <!-- Faixa de Valor -->
             <div class="space-y-2">
               <label class="block text-sm font-medium text-gray-700">
@@ -668,7 +950,7 @@ watch(() => authStore.user, async (user) => {
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-              <tr v-for="lead in filteredLeads" :key="lead.id" class="hover:bg-gray-50 transition-colors duration-150">
+              <tr v-for="lead in filteredLeadsBySearch" :key="lead.id" class="hover:bg-gray-50 transition-colors duration-150">
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="text-sm font-medium text-gray-900">{{ lead.name }}</div>
                 </td>
@@ -712,7 +994,7 @@ watch(() => authStore.user, async (user) => {
                     class="text-gray-600 hover:text-gray-900 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#01FBA1] rounded-md p-1"
                   >
                     <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L9 10.586 7.707 9.293a1 1 0 00-1.414-1.414l2 2a1 1 0 001.414 0l4-4z" />
                     </svg>
                   </button>
                   <!-- Botão de Reativar (apenas para leads arquivados) -->
@@ -723,7 +1005,7 @@ watch(() => authStore.user, async (user) => {
                     title="Reativar Lead"
                   >
                     <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
                   </button>
                   <!-- Botão de Arquivar (apenas para leads não arquivados) -->
@@ -753,18 +1035,21 @@ watch(() => authStore.user, async (user) => {
 
       <!-- Kanban Board -->
       <div v-else class="flex-1">
-        <div v-if="filteredLeads.length === 0" class="text-center py-10">
-          <p class="text-gray-500">Nenhum lead encontrado.</p>
+        <div v-if="filteredLeadsBySearch.length === 0" class="text-center py-10">
+          <p class="text-gray-500">Nenhum lead encontrado com os filtros selecionados</p>
         </div>
-        <LeadKanban 
-          v-else
-          :leads-by-column="getLeadsByColumn"
-          @edit-lead="openEditLeadModal"
-          @open-notes="openNotesModal"
-          @delete-lead="handleDeleteClick"
-          @archive-lead="handleArchiveClick"
-          @reactivate-lead="handleReactivateClick"
-        />
+        <div v-else>
+          <LeadKanban
+            :leads-by-column="getLeadsByColumn"
+            :userType="authStore.userRole"
+            @edit-lead="openEditLeadModal"
+            @delete-lead="handleDeleteClick"
+            @archive-lead="handleArchiveClick"
+            @reactivate-lead="handleReactivateClick"
+            @openNotes="openNotesModal"
+            @view-files="openFilesModal"
+          />
+        </div>
       </div>
 
       <!-- Lead Modal -->
@@ -772,39 +1057,45 @@ watch(() => authStore.user, async (user) => {
         v-if="showModal"
         :show="showModal"
         @close="showModal = false"
-        class="w-full max-w-7xl mx-auto"
+        :title="isEditMode ? 'Editar Lead' : 'Novo Lead'"
       >
-        <template #title>{{ isEditMode ? 'Editar Lead' : 'Novo Lead' }}</template>
         <template #content>
-          <!-- Error Message -->
-          <div v-if="saveError" class="mb-4 bg-red-50 border-l-4 border-red-400 p-4">
-            <div class="flex">
-              <div class="flex-shrink-0">
-                <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                </svg>
-              </div>
-              <div class="ml-3">
-                <p class="text-sm text-red-700">{{ saveError }}</p>
-              </div>
-            </div>
+          <div class="space-y-6">
+            <LeadForm
+              :lead="isEditMode ? editingLead : newLead"
+              :is-edit="isEditMode"
+              @submit="handleLeadSubmit"
+              @cancel="showModal = false"
+              @update:partners="partners => selectedPartners = partners"
+              @update:realtors="realtors => selectedRealtors = realtors"
+            />
           </div>
-
-          <!-- Form -->
-          <LeadForm
-            :lead="editingLead"
-            :is-edit="isEditMode"
-            :disabled="isSaving"
-            @submit="handleLeadSubmit"
-            @cancel="showModal = false"
-          />
-
-          <!-- Loading Overlay -->
-          <div v-if="isSaving" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center">
-            <div class="flex flex-col items-center">
-              <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-              <p class="mt-2 text-gray-600">Salvando lead...</p>
-            </div>
+        </template>
+        
+        <template #footer>
+          <div class="flex justify-end space-x-3">
+            <button
+              type="button"
+              @click="showModal = false"
+              class="px-4 py-2 text-sm font-medium text-[#012928] bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#01FBA1]"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              form="leadForm"
+              :disabled="isSaving"
+              class="px-4 py-2 text-sm font-medium text-white bg-[#012928] rounded-lg hover:bg-[#01FBA1] transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span v-if="isSaving" class="flex items-center">
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Salvando...
+              </span>
+              <span v-else>{{ isEditMode ? 'Salvar Alterações' : 'Criar Lead' }}</span>
+            </button>
           </div>
         </template>
       </Modal>
@@ -816,36 +1107,110 @@ watch(() => authStore.user, async (user) => {
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <span class="text-base sm:text-lg">Observações</span>
+            <span class="text-base sm:text-lg">Observações do Lead</span>
           </div>
         </template>
         <template #content>
-          <div class="w-full sm:w-[400px] space-y-3 sm:space-y-4">
+          <div class="w-full space-y-4">
+            <!-- Informações do Lead -->
+            <div class="bg-gray-50 p-4 rounded-lg space-y-3">
+              <!-- Nome e Data de Ativação -->
+              <div class="space-y-2">
+                <div class="flex items-center space-x-2">
+                  <span class="text-sm font-medium text-gray-500">Lead:</span>
+                  <span class="text-sm font-semibold text-gray-900">{{ selectedLead?.name }}</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <span class="text-sm font-medium text-gray-500">Ativo desde:</span>
+                  <span class="text-sm text-gray-900">{{ formatDateTime(selectedLead?.createdAt) }}</span>
+                </div>
+              </div>
+              
+              <!-- Informações específicas baseadas no papel do usuário -->
+              <!-- Para Parceiros -->
+              <template v-if="authStore.userRole === 'partner'">
+                <div class="space-y-1">
+                  <span class="text-sm font-medium text-gray-500">Broker:</span>
+                  <div class="pl-2">
+                    <span class="text-sm text-gray-900">
+                      {{ selectedLead?.createdBy ? getBrokerFromRealtor(selectedLead.createdBy) : 'Broker não atribuído' }}
+                    </span>
+                  </div>
+                </div>
+                <div class="space-y-1">
+                  <span class="text-sm font-medium text-gray-500">Corretores:</span>
+                  <div class="pl-2">
+                    <div v-if="!selectedLead?.assignedRealtors?.length" class="text-sm text-gray-500 italic">
+                      Lead ainda não atribuído a nenhum corretor
+                    </div>
+                    <div v-else v-for="realtorId in selectedLead.assignedRealtors" :key="realtorId" class="text-sm text-gray-900">
+                      {{ getRealtorName(realtorId) }}
+                    </div>
+                  </div>
+                </div>
+              </template>
+              
+              <!-- Para Corretores -->
+              <template v-else-if="authStore.userRole === 'realtor'">
+                <div class="space-y-1">
+                  <span class="text-sm font-medium text-gray-500">Compartilhado com:</span>
+                  <div class="pl-2">
+                    <div v-if="!selectedLead?.assignedPartners?.length" class="text-sm text-gray-500 italic">
+                      Lead ainda não compartilhado com nenhum parceiro
+                    </div>
+                    <div v-else v-for="partnerId in selectedLead.assignedPartners" :key="partnerId" class="text-sm text-gray-900">
+                      {{ getPartnerName(partnerId) }}
+                    </div>
+                  </div>
+                </div>
+              </template>
+              
+              <!-- Para Brokers -->
+              <template v-else-if="authStore.userRole === 'broker'">
+                <div class="space-y-1">
+                  <span class="text-sm font-medium text-gray-500">Corretores:</span>
+                  <div class="pl-2">
+                    <div v-if="!selectedLead?.assignedRealtors?.length" class="text-sm text-gray-500 italic">
+                      Lead ainda não atribuído a nenhum corretor
+                    </div>
+                    <div v-else v-for="realtorId in selectedLead.assignedRealtors" :key="realtorId" class="text-sm text-gray-900">
+                      {{ getRealtorName(realtorId) }}
+                    </div>
+                  </div>
+                </div>
+                <div class="space-y-1">
+                  <span class="text-sm font-medium text-gray-500">Parceiros com Acesso:</span>
+                  <div class="pl-2">
+                    <div v-if="!selectedLead?.assignedPartners?.length" class="text-sm text-gray-500 italic">
+                      Lead ainda não compartilhado com nenhum parceiro
+                    </div>
+                    <div v-else v-for="partnerId in selectedLead.assignedPartners" :key="partnerId" class="text-sm text-gray-900">
+                      {{ getPartnerName(partnerId) }}
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
+
             <!-- Add Note Form -->
-            <div class="space-y-3 sm:space-y-4">
+            <div class="space-y-4">
               <textarea
                 v-model="newNote"
-                rows="3"
-                class="shadow-sm block w-full focus:ring-[#01FBA1] focus:border-[#01FBA1] text-sm sm:text-base border border-gray-300 rounded-md"
                 placeholder="Digite sua observação..."
+                rows="4"
+                class="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:ring-[#01FBA1] focus:border-[#01FBA1] resize-none"
               ></textarea>
-              <div class="flex justify-end">
-                <button
-                  type="button"
-                  @click="addNote"
-                  :disabled="!newNote.trim()"
-                  class="inline-flex items-center justify-center rounded-md border border-transparent bg-[#012928] py-1.5 sm:py-2 px-3 sm:px-4 text-sm font-medium text-white shadow-sm hover:bg-[#012928]/90 focus:outline-none focus:ring-2 focus:ring-[#01FBA1] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                  </svg>
-                  <span class="text-sm sm:text-base">Adicionar Observação</span>
-                </button>
-              </div>
+              <button
+                @click="addNote"
+                :disabled="!newNote.trim()"
+                class="w-full px-4 py-2 text-sm font-medium text-white bg-[#012928] rounded-lg hover:bg-[#01FBA1] transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Adicionar Observação
+              </button>
             </div>
 
             <!-- Notes List -->
-            <div class="space-y-3 sm:space-y-4">
+            <div class="space-y-4 max-h-[400px] overflow-y-auto scrollbar">
               <div v-for="note in selectedLead?.notes" :key="note.id" class="bg-white p-3 sm:p-4 rounded-lg border border-gray-200">
                 <div v-if="editingObservation !== note.id" class="flex justify-between items-start">
                   <div>
@@ -871,7 +1236,7 @@ watch(() => authStore.user, async (user) => {
                       class="text-red-400 hover:text-red-500 p-1 rounded hover:bg-red-50"
                       title="Excluir observação"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
                         <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0111 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
                       </svg>
                     </button>
@@ -950,47 +1315,41 @@ watch(() => authStore.user, async (user) => {
                     :key="attachment.id" 
                     class="py-1.5 px-2 flex items-center hover:bg-gray-50 transition-colors duration-200"
                   >
-                    <div class="flex items-center space-x-2 flex-1 min-w-0">
-                      <svg class="h-3.5 w-3.5 flex-shrink-0 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clip-rule="evenodd" />
+                    <div class="flex items-center space-x-3">
+                      <!-- Ícone baseado no tipo de arquivo -->
+                      <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0112.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                       </svg>
-                      <div class="flex-1 min-w-0">
-                        <p class="text-xs font-medium text-gray-900 truncate">
-                          {{ attachment.name }}
-                        </p>
-                        <p class="text-[11px] text-gray-500">
-                          {{ formatFileSize(attachment.size) }} • {{ formatDate(new Date(attachment.uploadedAt)) }}
-                        </p>
+                      <div>
+                        <p class="text-sm font-medium text-gray-900">{{ attachment.name }}</p>
+                        <p class="text-xs text-gray-500">{{ formatFileSize(attachment.size) }}</p>
                       </div>
                     </div>
-                    <div class="flex items-center space-x-1">
+                    <div class="flex items-center space-x-2">
+                      <!-- Botão de download -->
                       <a
                         :href="attachment.url"
                         target="_blank"
-                        rel="noopener noreferrer"
-                        class="text-gray-400 hover:text-gray-500 p-1 rounded hover:bg-gray-100 transition-colors duration-200"
+                        class="p-1.5 text-gray-400 hover:text-indigo-600 transition-colors duration-200 rounded-full hover:bg-indigo-50"
                         title="Visualizar arquivo"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                          <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                          <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                         </svg>
                       </a>
+                      <!-- Botão de excluir -->
                       <button
                         @click="handleFileDelete(attachment)"
-                        class="text-red-400 hover:text-red-500 p-1 rounded hover:bg-red-50 transition-colors duration-200"
+                        class="p-1.5 text-gray-400 hover:text-red-600 transition-colors duration-200 rounded-full hover:bg-red-50"
                         title="Excluir arquivo"
                       >
-                        <svg class="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                          <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0111 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                       </button>
                     </div>
                   </li>
                 </ul>
-              </div>
-              <div v-if="!selectedLead?.attachments?.length" class="text-gray-500 text-center py-4">
-                Nenhum arquivo anexado ainda.
               </div>
             </div>
           </div>
@@ -1007,6 +1366,57 @@ watch(() => authStore.user, async (user) => {
               </svg>
               <span class="text-sm sm:text-base">Fechar</span>
             </button>
+          </div>
+        </template>
+      </Modal>
+
+      <!-- Modal de Arquivos -->
+      <Modal :show="showFilesModal" @close="showFilesModal = false">
+        <template #title>
+          <div class="flex items-center space-x-2">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+            </svg>
+            <span>Arquivos do Lead</span>
+          </div>
+        </template>
+        <template #content>
+          <div v-if="selectedLeadFiles" class="space-y-4">
+            <div v-for="attachment in selectedLeadFiles.attachments" :key="attachment.id" class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div class="flex items-center space-x-3">
+                <!-- Ícone baseado no tipo de arquivo -->
+                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0112.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                <div>
+                  <p class="text-sm font-medium text-gray-900">{{ attachment.name }}</p>
+                  <p class="text-xs text-gray-500">{{ formatFileSize(attachment.size) }}</p>
+                </div>
+              </div>
+              <div class="flex items-center space-x-2">
+                <!-- Botão de download -->
+                <a
+                  :href="attachment.url"
+                  target="_blank"
+                  class="p-1.5 text-gray-400 hover:text-indigo-600 transition-colors duration-200 rounded-full hover:bg-indigo-50"
+                  title="Baixar arquivo"
+                >
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                </a>
+                <!-- Botão de excluir -->
+                <button
+                  @click="handleFileDelete(attachment)"
+                  class="p-1.5 text-gray-400 hover:text-red-600 transition-colors duration-200 rounded-full hover:bg-red-50"
+                  title="Excluir arquivo"
+                >
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            </div>
           </div>
         </template>
       </Modal>

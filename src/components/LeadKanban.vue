@@ -10,6 +10,10 @@ const props = defineProps({
   leadsByColumn: {
     type: Object,
     required: true
+  },
+  userType: {
+    type: String,
+    required: true
   }
 });
 
@@ -84,7 +88,8 @@ const emit = defineEmits([
   'openNotes',
   'delete-lead',
   'archive-lead',
-  'reactivate-lead'
+  'reactivate-lead',
+  'view-files'
 ]);
 
 const handleDeleteClick = (lead) => {
@@ -260,15 +265,16 @@ onMounted(async () => {
                 drag-class="cursor-grabbing"
                 class="space-y-2 min-h-[200px]"
               >
-                <template #item="{ element: lead }">
-                  <LeadCard 
-                    :lead="lead" 
-                    :show-archive-button="true"
-                    @delete="handleDeleteClick" 
-                    @openNotes="$emit('openNotes', $event)"
+                <template #item="{ element }">
+                  <LeadCard
+                    :lead="element"
+                    :userType="userType"
                     @edit="$emit('edit-lead', $event)"
-                    @archive="handleArchiveClick"
-                    @reactivate="handleReactivateClick"
+                    @delete="$emit('delete-lead', $event)"
+                    @archive="$emit('archive-lead', $event)"
+                    @reactivate="$emit('reactivate-lead', $event)"
+                    @openNotes="$emit('openNotes', $event)"
+                    @view-files="$emit('view-files', $event)"
                   />
                 </template>
               </draggable>

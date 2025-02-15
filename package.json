@@ -23,21 +23,21 @@
     "libphonenumber-js": "^1.11.18",
     "lodash": "^4.17.21",
     "nouislider": "^15.8.1",
-    "pinia": "^2.3.1",
+    "pinia": "^2.1.7",
     "uuid": "^11.0.5",
-    "vue": "^3.5.10",
+    "vue": "^3.3.4",
     "vue-chartjs": "^5.3.0",
-    "vue-router": "^4.3.0",
-    "vue-toastification": "^1.7.14",
+    "vue-router": "^4.2.5",
+    "vue-toastification": "^2.0.0-rc.5",
     "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^5.1.4",
+    "@vitejs/plugin-vue": "^4.5.2",
     "autoprefixer": "^10.4.17",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5.5.3",
-    "vite": "^5.4.8",
-    "vue-tsc": "^2.1.6"
+    "typescript": "^5.3.3",
+    "vite": "^4.5.1",
+    "vue-tsc": "^1.8.27"
   }
 }

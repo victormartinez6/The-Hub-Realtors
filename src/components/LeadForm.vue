@@ -1,11 +1,17 @@
 <script setup lang="ts">
-import { ref, defineEmits, defineProps, watch, nextTick } from 'vue';
+import { ref, defineEmits, defineProps, watch, nextTick, computed, onMounted } from 'vue';
 import { useKanbanStore } from '../stores/kanban';
 import { leadService } from '../services/leadService';
+import { useAuthStore } from '../stores/auth';
+import { useUserManagementStore } from '../stores/userManagement';
 import Modal from './Modal.vue';
+import PartnerSelect from './PartnerSelect.vue';
+import RealtorSelect from './RealtorSelect.vue';
 import debounce from 'lodash/debounce';
 
 const kanbanStore = useKanbanStore();
+const authStore = useAuthStore();
+const userManagementStore = useUserManagementStore();
 const showDuplicateModal = ref(false);
 const duplicateLead = ref(null);
 const isSubmitting = ref(false);
@@ -15,18 +21,7 @@ const emailTimeout = ref<number | null>(null);
 const props = defineProps({
   lead: {
     type: Object,
-    default: () => ({
-      name: '',
-      email: '',
-      phone: '',
-      status: 'new',
-      kanbanColumn: '',
-      source: 'website',
-      priority: 'medium',
-      notes: '',
-      familyMembers: [],
-      propertyValue: 100000
-    })
+    required: true
   },
   isEdit: {
     type: Boolean,
@@ -38,25 +33,69 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['submit', 'cancel']);
+const emit = defineEmits(['submit', 'cancel', 'update:partners', 'update:realtors']);
 
 const formData = ref({
-  name: props.lead?.name || '',
-  email: props.lead?.email || '',
-  phone: props.lead?.phone || '',
-  countryCode: props.lead?.countryCode || '55',
-  status: props.lead?.status || 'new',
-  kanbanColumn: props.lead?.kanbanColumn || '',
-  source: props.lead?.source || 'website',
-  priority: props.lead?.priority || 'medium',
-  notes: props.lead?.notes || '',
-  familyMembers: (props.lead?.familyMembers || []).map(member => ({
-    ...member,
-    countryCode: member.countryCode || '55',
-    email: member.email || '' // Adicionando o campo de email
-  })),
-  propertyValue: props.lead?.propertyValue || 100000
+  name: '',
+  email: '',
+  phone: '',
+  countryCode: '55',
+  status: 'new',
+  kanbanColumn: '',
+  source: 'website',
+  priority: 'medium',
+  notes: '',
+  familyMembers: [],
+  propertyValue: 100000,
+  assignedRealtors: [], // Garantir que seja sempre um array
+  assignedPartners: []  // Garantir que seja sempre um array
 });
+
+// Se for um realtor criando um novo lead, atribuir automaticamente
+if (!props.isEdit && authStore.userRole === 'realtor') {
+  formData.value.assignedRealtors = [authStore.user.uid];
+} else if (!props.isEdit && authStore.userRole === 'partner') {
+  formData.value.assignedPartners = [authStore.user.uid];
+}
+
+watch(() => props.lead, async (newLead) => {
+  if (newLead) {
+    // Carregar usuários antes de atualizar o formData
+    if (authStore.userRole === 'realtor' || authStore.userRole === 'broker') {
+      await userManagementStore.fetchUsers();
+    }
+
+    // Garantir que os arrays de realtors e partners sejam sempre arrays válidos
+    const assignedRealtors = Array.isArray(newLead.assignedRealtors) ? [...newLead.assignedRealtors] : [];
+    const assignedPartners = Array.isArray(newLead.assignedPartners) ? [...newLead.assignedPartners] : [];
+
+    // Log para debug
+    console.log('[LeadForm] Realtors atribuídos:', assignedRealtors);
+    console.log('[LeadForm] Partners atribuídos:', assignedPartners);
+
+    formData.value = {
+      ...formData.value, // Manter os valores padrão para campos não definidos
+      ...newLead,
+      assignedRealtors,
+      assignedPartners,
+      familyMembers: (newLead.familyMembers || []).map(member => ({
+        ...member,
+        countryCode: member.countryCode || '55',
+        email: member.email || ''
+      }))
+    };
+
+    // Emitir eventos para atualizar os selects no componente pai
+    if (authStore.userRole === 'realtor') {
+      emit('update:partners', assignedPartners);
+    } else if (authStore.userRole === 'broker') {
+      emit('update:realtors', assignedRealtors);
+      emit('update:partners', assignedPartners);
+    }
+
+    console.log('[LeadForm] Dados atualizados:', formData.value);
+  }
+}, { immediate: true, deep: true });
 
 const phoneError = ref('');
 
@@ -123,33 +162,38 @@ const getWhatsAppLink = (phone: string, countryCode: string) => {
 
 const handleSubmit = async (e) => {
   e.preventDefault();
-  
-  if (props.disabled || isSubmitting.value) return;
-  
+  if (isSubmitting.value) return;
+
   if (!validatePhone(formData.value.phone, formData.value.countryCode)) {
     return;
   }
 
   try {
     isSubmitting.value = true;
-    // Prepara os dados para envio
-    const dataToSubmit = {
+
+    // Garantir que os arrays existam e incluam o usuário atual se for realtor/partner
+    const assignedRealtors = Array.isArray(formData.value.assignedRealtors) ? [...formData.value.assignedRealtors] : [];
+    const assignedPartners = Array.isArray(formData.value.assignedPartners) ? [...formData.value.assignedPartners] : [];
+
+    if (!props.isEdit) {
+      if (authStore.userRole === 'realtor' && !assignedRealtors.includes(authStore.user.uid)) {
+        assignedRealtors.push(authStore.user.uid);
+      } else if (authStore.userRole === 'partner' && !assignedPartners.includes(authStore.user.uid)) {
+        assignedPartners.push(authStore.user.uid);
+      }
+    }
+
+    // Formata os dados antes de enviar
+    const formattedData = {
       ...formData.value,
-      // Garante que o countryCode seja enviado
-      countryCode: formData.value.countryCode || '55',
-      // Processa os membros da família para garantir que o telefone esteja no formato correto
-      familyMembers: formData.value.familyMembers.map(member => ({
-        ...member,
-        phone: member.phone,
-        countryCode: member.countryCode || '55',
-        email: member.email // Adicionando o campo de email
-      })),
-      propertyValue: Math.floor(Number(formData.value.propertyValue))
+      assignedRealtors,
+      assignedPartners,
+      familyMembers: formData.value.familyMembers || []
     };
-    console.log('Enviando dados do lead:', dataToSubmit);
-    emit('submit', dataToSubmit);
+
+    emit('submit', formattedData);
   } catch (error) {
-    console.error('Erro ao salvar lead:', error);
+    console.error('Erro ao enviar formulário:', error);
   } finally {
     isSubmitting.value = false;
   }
@@ -239,29 +283,6 @@ watch(() => formData.value.propertyValue, (newValue) => {
   }
 });
 
-// Watch para atualizar os dados quando o lead mudar
-watch(() => props.lead, (newLead) => {
-  if (newLead) {
-    formData.value = {
-      name: newLead.name || '',
-      email: newLead.email || '',
-      phone: newLead.phone || '',
-      countryCode: newLead.countryCode || '55',
-      status: newLead.status || 'new',
-      kanbanColumn: newLead.kanbanColumn || '',
-      source: newLead.source || 'website',
-      priority: newLead.priority || 'medium',
-      notes: newLead.notes || '',
-      familyMembers: (newLead.familyMembers || []).map(member => ({
-        ...member,
-        countryCode: member.countryCode || '55',
-        email: member.email || '' // Adicionando o campo de email
-      })),
-      propertyValue: newLead.propertyValue || 100000
-    };
-  }
-}, { deep: true });
-
 const getPriorityStyle = (priority) => {
   const priorityObj = priorities.find(p => p.value === priority);
   return priorityObj ? `${priorityObj.bgColor} ${priorityObj.borderColor}` : '';
@@ -273,7 +294,7 @@ const addFamilyMember = () => {
     relationship: '',
     phone: '',
     countryCode: '55',
-    email: '' // Adicionando o campo de email
+    email: ''
   });
 };
 
@@ -297,10 +318,21 @@ const handleFamilyMemberCountryCodeInput = (event: Event, index: number) => {
   const input = event.target as HTMLInputElement;
   formData.value.familyMembers[index].countryCode = input.value.replace(/\D/g, '');
 };
+
+onMounted(async () => {
+  // Carregar usuários se for realtor ou broker
+  if (authStore.userRole === 'realtor' || authStore.userRole === 'broker') {
+    await userManagementStore.fetchUsers();
+  }
+});
+
+const realtors = computed(() => userManagementStore.usersByBroker || []);
+const partners = computed(() => userManagementStore.usersByRole.partner || []);
+
 </script>
 
 <template>
-  <form @submit="handleSubmit" class="space-y-8">
+  <form @submit="handleSubmit" id="leadForm" class="space-y-8">
     <!-- Informações Básicas -->
     <div class="bg-white rounded-lg shadow p-6 space-y-6">
       <h3 class="text-lg font-medium text-gray-900 border-b pb-3">Informações do Lead Principal</h3>
@@ -318,7 +350,7 @@ const handleFamilyMemberCountryCodeInput = (event: Event, index: number) => {
               id="name"
               v-model="formData.name"
               required
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#012928] focus:ring-[#012928] sm:text-sm"
+              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#01FBA1] focus:ring-[#01FBA1] sm:text-sm"
               :disabled="props.disabled"
             />
           </div>
@@ -334,7 +366,7 @@ const handleFamilyMemberCountryCodeInput = (event: Event, index: number) => {
               v-model="formData.email"
               required
               @blur="handleEmailBlur"
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#012928] focus:ring-[#012928] sm:text-sm"
+              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#01FBA1] focus:ring-[#01FBA1] sm:text-sm"
               :disabled="props.disabled || isCheckingEmail"
             />
           </div>
@@ -358,7 +390,7 @@ const handleFamilyMemberCountryCodeInput = (event: Event, index: number) => {
                   placeholder="55"
                   maxlength="3"
                   @input="handleCountryCodeInput"
-                  class="block w-20 pl-6 rounded-md border-gray-300 shadow-sm focus:border-[#012928] focus:ring-[#012928] sm:text-sm"
+                  class="block w-20 pl-6 rounded-md border-gray-300 shadow-sm focus:border-[#01FBA1] focus:ring-[#01FBA1] sm:text-sm"
                   :disabled="props.disabled"
                 />
               </div>
@@ -369,7 +401,7 @@ const handleFamilyMemberCountryCodeInput = (event: Event, index: number) => {
                 required
                 placeholder="11999999999"
                 @input="handlePhoneInput"
-                class="block flex-1 rounded-md border-gray-300 shadow-sm focus:border-[#012928] focus:ring-[#012928] sm:text-sm"
+                class="block flex-1 rounded-md border-gray-300 shadow-sm focus:border-[#01FBA1] focus:ring-[#01FBA1] sm:text-sm"
                 :disabled="props.disabled"
               />
             </div>
@@ -407,7 +439,7 @@ const handleFamilyMemberCountryCodeInput = (event: Event, index: number) => {
           <button
             type="button"
             @click="addFamilyMember"
-            class="inline-flex items-center bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#012928] disabled:bg-gray-100 disabled:cursor-not-allowed"
+            class="inline-flex items-center bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#01FBA1] disabled:bg-gray-100 disabled:cursor-not-allowed"
             :disabled="props.disabled"
           >
             <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -448,7 +480,7 @@ const handleFamilyMemberCountryCodeInput = (event: Event, index: number) => {
                   :id="'member-name-' + index"
                   type="text"
                   v-model="member.name"
-                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#012928] focus:ring-[#012928] sm:text-sm"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#01FBA1] focus:ring-[#01FBA1] sm:text-sm"
                   :disabled="props.disabled"
                 />
               </div>
@@ -463,7 +495,7 @@ const handleFamilyMemberCountryCodeInput = (event: Event, index: number) => {
                   type="text"
                   v-model="member.relationship"
                   placeholder="Ex: Cônjuge, Filho(a), Pai, Mãe"
-                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#012928] focus:ring-[#012928] sm:text-sm"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#01FBA1] focus:ring-[#01FBA1] sm:text-sm"
                   :disabled="props.disabled"
                 />
               </div>
@@ -486,7 +518,7 @@ const handleFamilyMemberCountryCodeInput = (event: Event, index: number) => {
                       placeholder="55"
                       maxlength="3"
                       @input="handleFamilyMemberCountryCodeInput($event, index)"
-                      class="block w-16 pl-6 rounded-md border-gray-300 shadow-sm focus:border-[#012928] focus:ring-[#012928] sm:text-sm"
+                      class="block w-16 pl-6 rounded-md border-gray-300 shadow-sm focus:border-[#01FBA1] focus:ring-[#01FBA1] sm:text-sm"
                       :disabled="props.disabled"
                     />
                   </div>
@@ -496,7 +528,7 @@ const handleFamilyMemberCountryCodeInput = (event: Event, index: number) => {
                     v-model="member.phone"
                     placeholder="11999999999"
                     @input="handleFamilyMemberPhoneInput($event, index)"
-                    class="block flex-1 rounded-md border-gray-300 shadow-sm focus:border-[#012928] focus:ring-[#012928] sm:text-sm"
+                    class="block flex-1 rounded-md border-gray-300 shadow-sm focus:border-[#01FBA1] focus:ring-[#01FBA1] sm:text-sm"
                     :disabled="props.disabled"
                   />
                 </div>
@@ -513,7 +545,7 @@ const handleFamilyMemberCountryCodeInput = (event: Event, index: number) => {
                   type="email"
                   v-model="member.email"
                   placeholder="email@exemplo.com"
-                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#012928] focus:ring-[#012928] sm:text-sm"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#01FBA1] focus:ring-[#01FBA1] sm:text-sm"
                   :disabled="props.disabled"
                 />
               </div>
@@ -564,9 +596,10 @@ const handleFamilyMemberCountryCodeInput = (event: Event, index: number) => {
             :key="priority.value"
             @click="formData.priority = priority.value"
             :class="[
-              'relative flex cursor-pointer rounded-lg border p-4 focus:outline-none transition-all duration-200 hover:border-indigo-500',
-              formData.priority === priority.value ? 'ring-2 ring-indigo-500' : 'border-gray-300',
-              getPriorityStyle(priority.value)
+              'relative flex cursor-pointer rounded-lg border p-4 focus:outline-none transition-all duration-200',
+              formData.priority === priority.value 
+                ? 'border-[#01FBA1] ring-2 ring-[#01FBA1] bg-[#01FBA1]/5' 
+                : 'border-gray-300 hover:border-[#01FBA1]'
             ]"
           >
             <div class="flex w-full items-center justify-between">
@@ -574,7 +607,7 @@ const handleFamilyMemberCountryCodeInput = (event: Event, index: number) => {
                 <span class="mr-2 text-xl">{{ priority.icon }}</span>
                 <span :class="[priority.color, 'font-medium']">{{ priority.label }}</span>
               </div>
-              <div v-show="formData.priority === priority.value" class="text-indigo-600">
+              <div v-show="formData.priority === priority.value" class="text-[#01FBA1]">
                 <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                 </svg>
@@ -593,8 +626,10 @@ const handleFamilyMemberCountryCodeInput = (event: Event, index: number) => {
             :key="source.value"
             @click="formData.source = source.value"
             :class="[
-              'relative flex cursor-pointer rounded-lg border p-4 focus:outline-none transition-all duration-200 hover:border-indigo-500',
-              formData.source === source.value ? 'ring-2 ring-indigo-500' : 'border-gray-300'
+              'relative flex cursor-pointer rounded-lg border p-4 focus:outline-none transition-all duration-200',
+              formData.source === source.value 
+                ? 'border-[#01FBA1] ring-2 ring-[#01FBA1] bg-[#01FBA1]/5' 
+                : 'border-gray-300 hover:border-[#01FBA1]'
             ]"
           >
             <div class="flex w-full items-center justify-between">
@@ -602,7 +637,7 @@ const handleFamilyMemberCountryCodeInput = (event: Event, index: number) => {
                 <span class="mr-2 text-xl">{{ source.icon }}</span>
                 <span class="font-medium text-gray-900">{{ source.label }}</span>
               </div>
-              <div v-show="formData.source === source.value" class="text-indigo-600">
+              <div v-show="formData.source === source.value" class="text-[#01FBA1]">
                 <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                 </svg>
@@ -622,36 +657,47 @@ const handleFamilyMemberCountryCodeInput = (event: Event, index: number) => {
             rows="3"
             :disabled="props.disabled"
             v-model="formData.notes"
-            class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+            class="shadow-sm focus:ring-[#01FBA1] focus:border-[#01FBA1] block w-full sm:text-sm border-gray-300 rounded-md"
             placeholder="Adicione observações importantes sobre o lead..."
           ></textarea>
         </div>
       </div>
     </div>
 
-    <!-- Botões -->
-    <div class="flex justify-end space-x-3 pt-6">
-      <button
-        type="button"
-        :disabled="props.disabled"
-        @click="$emit('cancel')"
-        class="inline-flex items-center bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#012928] disabled:bg-gray-100 disabled:cursor-not-allowed"
-      >
-        <svg class="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-        Cancelar
-      </button>
-      <button
-        type="submit"
-        :disabled="props.disabled"
-        class="inline-flex items-center justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-[#012928] hover:bg-[#012928]/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#012928] disabled:bg-[#012928]/50 disabled:cursor-not-allowed"
-      >
-        <svg class="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-        </svg>
-        {{ props.isEdit ? 'Atualizar' : 'Criar' }}
-      </button>
+    <!-- Seleção de Realtor e Parceiros (apenas para Broker) -->
+    <div v-if="authStore.isBroker" class="bg-white rounded-lg shadow p-6 space-y-6">
+      <h3 class="text-lg font-medium text-[#012928] border-b pb-3">Atribuição de Realtor e Parceiros</h3>
+      
+      <div class="space-y-6">
+        <!-- Seletor de Realtor -->
+        <RealtorSelect
+          v-model="formData.assignedRealtors"
+          label="Selecione o Realtor"
+          placeholder="Buscar realtor..."
+          :multiple="false"
+        />
+
+        <!-- Seletor de Parceiros -->
+        <PartnerSelect
+          v-model="formData.assignedPartners"
+          label="Selecione os Parceiros"
+          placeholder="Buscar parceiro..."
+        />
+      </div>
+    </div>
+
+    <!-- Atribuição de Parceiros para Realtor -->
+    <div v-else-if="authStore.userRole === 'realtor'" class="bg-white rounded-lg shadow p-6 space-y-6">
+      <h3 class="text-lg font-medium text-[#012928] border-b pb-3">Atribuição de Parceiros</h3>
+      
+      <div class="space-y-6">
+        <!-- Seletor de Parceiros -->
+        <PartnerSelect
+          v-model="formData.assignedPartners"
+          label="Selecione os Parceiros"
+          placeholder="Buscar parceiro..."
+        />
+      </div>
     </div>
   </form>
 
@@ -692,7 +738,7 @@ const handleFamilyMemberCountryCodeInput = (event: Event, index: number) => {
             <div class="px-4 py-5 sm:px-6 bg-white">
               <h3 class="text-lg leading-6 font-medium text-[#012928] flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-[#012928]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7" />
                 </svg>
                 Informações do Lead
               </h3>
@@ -702,7 +748,7 @@ const handleFamilyMemberCountryCodeInput = (event: Event, index: number) => {
                 <div class="bg-white px-4 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                   <dt class="text-sm font-medium text-[#012928] flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7" />
                     </svg>
                     Nome
                   </dt>

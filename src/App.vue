@@ -1,24 +1,28 @@
 <script setup lang="ts">
-import { RouterView, useRoute } from 'vue-router';
 import { useAuthStore } from './stores/auth';
 import { onMounted, computed } from 'vue';
+import { useRoute } from 'vue-router';
 import AppLayout from './components/AppLayout.vue';
 
 const authStore = useAuthStore();
 const route = useRoute();
 
 const isAuthPage = computed(() => {
-  return ['/login', '/register'].includes(route.path);
+  return ['/login', '/register', '/forgot-password'].includes(route.path);
 });
 
 // Inicializar autenticação uma única vez
 onMounted(async () => {
-  await authStore.init();
+  try {
+    await authStore.initAuth();
+  } catch (error) {
+    console.error('Erro ao inicializar autenticação:', error);
+  }
 });
 </script>
 
 <template>
-  <template v-if="authStore.isInitialized">
+  <template v-if="authStore.initialized">
     <AppLayout v-if="authStore.user && !isAuthPage">
       <RouterView />
     </AppLayout>

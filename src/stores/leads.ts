@@ -141,6 +141,29 @@ export const useLeadsStore = defineStore('leads', {
       }
     },
 
+    async unarchiveLead(id: string) {
+      this.loading = true;
+      this.error = null;
+      try {
+        const updatedLead = await leadService.unarchiveLead(id);
+        
+        // Atualizar o estado local
+        const index = this.leads.findIndex(lead => lead.id === id);
+        if (index !== -1) {
+          this.leads[index] = updatedLead;
+        }
+        
+        this.saveToStorage();
+        return updatedLead;
+      } catch (error) {
+        console.error('Erro ao reativar lead:', error);
+        this.error = error instanceof Error ? error.message : 'Erro ao reativar lead';
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
     async checkLeadExists(id: string) {
       try {
         return await leadService.checkLeadExists(id);
@@ -156,3 +179,24 @@ export const useLeadsStore = defineStore('leads', {
     }
   }
 });
+
+export interface Lead {
+  id?: string;
+  name: string;
+  email: string;
+  phone: string;
+  countryCode: string;
+  status: string;
+  source: string;
+  priority: string;
+  notes: string;
+  familyMembers: FamilyMember[];
+  propertyValue: number;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  createdBy: string;
+  brokerId: string;
+  assignedPartners: string[];
+  kanbanColumn: string;
+  archived: boolean;
+}
