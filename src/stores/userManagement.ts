@@ -20,6 +20,7 @@ import {
   signOut
 } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
+import { logger } from '../utils/logger';
 
 interface User {
   id: string;
@@ -87,9 +88,9 @@ export const useUserManagementStore = defineStore('userManagement', {
             return dateB - dateA;
           }) as User[];
 
-        console.log('[UserManagementStore] Usuários carregados:', this.users.length);
+        logger.debug(`UserManagement: Usuários carregados: ${this.users.length}`);
       } catch (err) {
-        console.error('Erro ao buscar usuários:', err);
+        logger.error('UserManagement: Erro ao buscar usuários:', err);
         this.error = 'Erro ao carregar usuários';
       } finally {
         this.loading = false;
@@ -111,7 +112,7 @@ export const useUserManagementStore = defineStore('userManagement', {
           ...doc.data()
         })) as User[];
       } catch (err) {
-        console.error('Erro ao buscar brokers:', err);
+        logger.error('UserManagement: Erro ao buscar brokers:', err);
       }
     },
 
@@ -119,63 +120,61 @@ export const useUserManagementStore = defineStore('userManagement', {
       this.loading = true;
       this.error = null;
       try {
-        // Verificar se o email já existe
-        try {
-          // 1. Criar usuário no Firebase Auth
-          const userCredential = await createUserWithEmailAndPassword(
-            auth,
-            userData.email,
-            Math.random().toString(36).slice(-8) // senha temporária
-          );
+        // 1. Criar usuário no Firebase Auth
+        const userCredential = await createUserWithEmailAndPassword(
+          auth,
+          userData.email,
+          Math.random().toString(36).slice(-8) // senha temporária
+        );
 
-          // 2. Fazer logout imediatamente para não ficar logado como o novo usuário
-          await signOut(auth);
+        // 2. Fazer logout imediatamente para não ficar logado como o novo usuário
+        await signOut(auth);
 
-          // 3. Atualizar perfil do usuário
-          await updateProfile(userCredential.user, {
-            displayName: userData.displayName,
-            photoURL: userData.photoURL
-          });
+        // 3. Atualizar perfil do usuário
+        await updateProfile(userCredential.user, {
+          displayName: userData.displayName,
+          photoURL: userData.photoURL
+        });
 
-          // 4. Criar documento do usuário no Firestore
-          const userDoc = doc(db, 'users', userCredential.user.uid);
-          
-          await setDoc(userDoc, {
-            ...userData,
-            id: userCredential.user.uid,
-            uid: userCredential.user.uid,
-            status: 'active', // Garantindo que o status seja 'active' por padrão
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp()
-          });
+        // 4. Criar documento do usuário no Firestore
+        const userDoc = doc(db, 'users', userCredential.user.uid);
+        
+        const userDataToSave = {
+          ...userData,
+          id: userCredential.user.uid,
+          uid: userCredential.user.uid,
+          status: 'active',
+          active: true,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          // Garantir que os campos opcionais existam
+          phone: userData.phone || null,
+          countryCode: userData.countryCode || null,
+          streetAddress: userData.streetAddress || null,
+          unit: userData.unit || null,
+          city: userData.city || null,
+          state: userData.state || null,
+          zipCode: userData.zipCode || null,
+          photoURL: userData.photoURL || null,
+          profilePicture: userData.profilePicture || null
+        };
+        
+        await setDoc(userDoc, userDataToSave);
 
-          // 5. Se for um corretor, buscar o nome do broker
-          if (userData.role === 'realtor' && userData.brokerId) {
-            const brokerDoc = await getDoc(doc(db, 'users', userData.brokerId));
-            if (brokerDoc.exists()) {
-              await updateDoc(userDoc, {
-                brokerName: brokerDoc.data().displayName
-              });
-            }
-          }
+        // 5. Enviar email de redefinição de senha
+        await sendPasswordResetEmail(auth, userData.email);
 
-          // 6. Enviar email de redefinição de senha
-          await sendPasswordResetEmail(auth, userData.email);
-
-          // 7. Atualizar estado local
-          await this.fetchUsers();
-
-          return userCredential.user.uid;
-        } catch (error: any) {
-          if (error.code === 'auth/email-already-in-use') {
-            throw new Error('Este email já está cadastrado no sistema. Por favor, use outro email.');
-          }
-          throw error;
+        // 6. Atualizar o estado local
+        this.users.push(userDataToSave as User);
+        
+        return userDataToSave;
+      } catch (error: any) {
+        logger.error('UserManagement: Erro ao criar usuário:', error);
+        if (error.code === 'auth/email-already-in-use') {
+          throw new Error('Este email já está em uso');
         }
-      } catch (err: any) {
-        console.error('Erro ao criar usuário:', err);
-        this.error = err.message || 'Erro ao criar usuário';
-        throw err;
+        this.error = error.message || 'Erro ao criar usuário';
+        throw error;
       } finally {
         this.loading = false;
       }
@@ -195,7 +194,7 @@ export const useUserManagementStore = defineStore('userManagement', {
         // Atualizar estado local
         await this.fetchUsers();
       } catch (err) {
-        console.error('Erro ao atualizar usuário:', err);
+        logger.error('UserManagement: Erro ao atualizar usuário:', err);
         this.error = 'Erro ao atualizar usuário';
         throw err;
       } finally {
@@ -217,7 +216,7 @@ export const useUserManagementStore = defineStore('userManagement', {
         // Atualizar estado local
         await this.fetchUsers();
       } catch (err) {
-        console.error('Erro ao bloquear usuário:', err);
+        logger.error('UserManagement: Erro ao bloquear usuário:', err);
         this.error = 'Erro ao bloquear usuário';
         throw err;
       } finally {
@@ -239,7 +238,7 @@ export const useUserManagementStore = defineStore('userManagement', {
         // Atualizar estado local
         await this.fetchUsers();
       } catch (err) {
-        console.error('Erro ao desbloquear usuário:', err);
+        logger.error('UserManagement: Erro ao desbloquear usuário:', err);
         this.error = 'Erro ao desbloquear usuário';
         throw err;
       } finally {
@@ -253,7 +252,7 @@ export const useUserManagementStore = defineStore('userManagement', {
       try {
         await sendPasswordResetEmail(auth, email);
       } catch (err) {
-        console.error('Erro ao enviar email de redefinição:', err);
+        logger.error('UserManagement: Erro ao enviar email de redefinição:', err);
         this.error = 'Erro ao enviar email de redefinição';
         throw err;
       } finally {
@@ -284,8 +283,8 @@ export const useUserManagementStore = defineStore('userManagement', {
         // Atualizar o estado local
         this.users = this.users.filter(user => user.id !== userId);
       } catch (error: any) {
+        logger.error('UserManagement: Erro ao deletar usuário:', error);
         this.error = error.message;
-        console.error('Erro ao deletar usuário:', error);
         throw error;
       } finally {
         this.loading = false;
@@ -293,34 +292,26 @@ export const useUserManagementStore = defineStore('userManagement', {
     },
 
     async fetchBrokerRealtors(brokerId: string) {
-      console.log('[UserManagementStore] Iniciando busca de realtors para o broker:', brokerId);
-      this.loading = true;
-      this.error = null;
+      logger.debug(`UserManagement: Buscando realtors do broker ${brokerId}`);
       try {
-        const usersCollection = collection(db, 'users');
-        const q = query(
-          usersCollection,
+        const querySnapshot = await getDocs(query(
+          collection(db, 'users'),
           where('role', '==', 'realtor'),
           where('brokerId', '==', brokerId)
-          // Removido o filtro de status para mostrar todos os realtors
-        );
+        ));
 
-        const querySnapshot = await getDocs(q);
         const realtors = querySnapshot.docs.map(doc => ({
           id: doc.id,
-          ...doc.data()
-        })) as User[];
-
-        console.log('[UserManagementStore] Query executada, documentos encontrados:', querySnapshot.size);
-        console.log('[UserManagementStore] Realtors encontrados:', realtors);
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate?.() || null,
+          updatedAt: doc.data().updatedAt?.toDate?.() || null
+        }));
 
         this.usersByBroker = realtors;
-        console.log('[UserManagementStore] Realtors carregados com sucesso:', this.usersByBroker);
-      } catch (err) {
-        console.error('[UserManagementStore] Erro ao buscar realtors:', err);
-        this.error = 'Erro ao buscar realtors';
-      } finally {
-        this.loading = false;
+        logger.debug(`UserManagement: ${realtors.length} realtors encontrados`);
+      } catch (error) {
+        logger.error('UserManagement: Erro ao buscar realtors:', error);
+        throw error;
       }
     },
 
@@ -328,7 +319,7 @@ export const useUserManagementStore = defineStore('userManagement', {
       this.loading = true;
       this.error = null;
       try {
-        console.log('[UserManagementStore] Iniciando busca de parceiros');
+        logger.debug('UserManagement: Buscando parceiros');
         const usersCollection = collection(db, 'users');
         const q = query(
           usersCollection,
@@ -337,7 +328,7 @@ export const useUserManagementStore = defineStore('userManagement', {
         );
         
         const querySnapshot = await getDocs(q);
-        console.log('[UserManagementStore] Parceiros encontrados:', querySnapshot.size);
+        logger.debug('UserManagement: Parceiros encontrados:', querySnapshot.size);
         
         this.usersByRole.partner = querySnapshot.docs.map(doc => ({
           id: doc.id,
@@ -347,9 +338,9 @@ export const useUserManagementStore = defineStore('userManagement', {
           lastLogin: doc.data().lastLogin?.toDate?.() || null
         })) as User[];
 
-        console.log('[UserManagementStore] Lista de parceiros atualizada:', this.usersByRole.partner);
+        logger.debug('UserManagement: Lista de parceiros atualizada:', this.usersByRole.partner);
       } catch (err) {
-        console.error('[UserManagementStore] Erro ao buscar parceiros:', err);
+        logger.error('UserManagement: Erro ao buscar parceiros:', err);
         this.error = 'Erro ao carregar parceiros';
       } finally {
         this.loading = false;
@@ -360,7 +351,7 @@ export const useUserManagementStore = defineStore('userManagement', {
       this.loading = true;
       this.error = null;
       try {
-        console.log('[UserManagementStore] Iniciando busca de realtors para o broker:', brokerId);
+        logger.debug(`UserManagement: Buscando realtors para o broker ${brokerId}`);
         const usersCollection = collection(db, 'users');
         const q = query(
           usersCollection,
@@ -370,11 +361,11 @@ export const useUserManagementStore = defineStore('userManagement', {
         );
         
         const querySnapshot = await getDocs(q);
-        console.log('[UserManagementStore] Query executada, documentos encontrados:', querySnapshot.size);
+        logger.debug('UserManagement: Query executada, documentos encontrados:', querySnapshot.size);
         
         // Log detalhado dos documentos encontrados
         querySnapshot.forEach((doc) => {
-          console.log('[UserManagementStore] Realtor encontrado:', {
+          logger.debug('UserManagement: Realtor encontrado:', {
             id: doc.id,
             ...doc.data()
           });
@@ -388,9 +379,9 @@ export const useUserManagementStore = defineStore('userManagement', {
           lastLogin: doc.data().lastLogin?.toDate?.() || null
         })) as User[];
         
-        console.log('[UserManagementStore] Realtors carregados com sucesso:', this.usersByBroker);
+        logger.debug('UserManagement: Realtors carregados com sucesso:', this.usersByBroker);
       } catch (err) {
-        console.error('[UserManagementStore] Erro ao buscar realtors do broker:', err);
+        logger.error('UserManagement: Erro ao buscar realtors do broker:', err);
         this.error = 'Erro ao carregar realtors';
       } finally {
         this.loading = false;
@@ -401,7 +392,7 @@ export const useUserManagementStore = defineStore('userManagement', {
       this.loading = true;
       this.error = null;
       try {
-        console.log('Buscando usuários com role:', role);
+        logger.debug(`UserManagement: Buscando usuários com role ${role}`);
         const usersCollection = collection(db, 'users');
         const q = query(
           usersCollection,
@@ -410,7 +401,7 @@ export const useUserManagementStore = defineStore('userManagement', {
         );
         
         const querySnapshot = await getDocs(q);
-        console.log('Usuários encontrados:', querySnapshot.size);
+        logger.debug(`UserManagement: Usuários encontrados: ${querySnapshot.size}`);
         
         this.usersByRole[role] = querySnapshot.docs.map(doc => ({
           id: doc.id,
@@ -420,7 +411,7 @@ export const useUserManagementStore = defineStore('userManagement', {
           lastLogin: doc.data().lastLogin?.toDate?.() || null
         })) as User[];
       } catch (err) {
-        console.error(`Erro ao buscar usuários com role ${role}:`, err);
+        logger.error(`UserManagement: Erro ao buscar usuários com role ${role}:`, err);
         this.error = `Erro ao carregar ${role}s`;
       } finally {
         this.loading = false;

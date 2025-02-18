@@ -23,6 +23,12 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: ['super_admin'] }
     },
     {
+      path: '/admin/email-templates',
+      name: 'emailTemplates',
+      component: () => import('../views/EmailTemplates.vue'),
+      meta: { requiresAuth: true, roles: ['super_admin'] }
+    },
+    {
       path: '/dashboard',
       name: 'dashboard',
       component: () => import('../views/Dashboard.vue'),
@@ -67,7 +73,7 @@ const router = createRouter({
     {
       path: '/calendar',
       name: 'calendar',
-      component: () => import('../views/Calendar.vue'),
+      component: () => import('@/views/Calendar.vue'),
       meta: { requiresAuth: true }
     },
     {
@@ -124,6 +130,14 @@ const router = createRouter({
       component: () => import('../views/ResetPassword.vue'),
       meta: { requiresAuth: false },
       props: (route) => ({ code: route.query.oobCode })
+    },
+    {
+      path: '/team',
+      redirect: '/dashboard/broker/realtors'
+    },
+    {
+      path: '/agenda',
+      redirect: '/calendar'
     }
   ]
 });

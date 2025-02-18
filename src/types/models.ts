@@ -12,8 +12,16 @@ export interface User {
   updatedAt: string;
   active: boolean;
   phoneNumber?: string;
+  phone?: string;      // Número de telefone com DDI
+  countryCode?: string; // Código do país (US, BR, etc)
   photoURL?: string;   // URL da foto do perfil
   profilePicture?: string;
+  // Campos de endereço
+  streetAddress?: string;
+  unit?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
 }
 
 export interface Lead {

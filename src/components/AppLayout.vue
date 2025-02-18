@@ -18,7 +18,7 @@
     <!-- Main Content -->
     <div class="flex flex-col flex-1 min-h-screen overflow-x-hidden overflow-y-auto">
       <!-- Top Bar -->
-      <header class="flex items-center justify-between p-4 bg-white border-b">
+      <header class="lg:hidden flex items-center justify-between p-4 bg-white border-b">
         <div class="flex items-center space-x-4">
           <button
             @click="isSidebarOpen = !isSidebarOpen"
@@ -39,9 +39,7 @@
               />
             </svg>
           </button>
-          <h1 class="text-2xl font-semibold text-gray-900">
-            {{ currentRouteName }}
-          </h1>
+          <img :src="logoNome" alt="The Hub Realtors" class="h-8 w-auto">
         </div>
       </header>
 
@@ -54,26 +52,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { useRoute } from 'vue-router';
-import Navigation from './Navigation.vue';
-import { useRouter } from 'vue-router';
-import { useAuthStore } from '../stores/auth';
+import { ref } from 'vue';
+import Navigation from '@/components/Navigation.vue';
+import logoNome from '@/assets/images/The Hub Realtors_nome.svg';
 
-const route = useRoute();
-const router = useRouter();
-const authStore = useAuthStore();
-
-const isSidebarOpen = ref(true);
-
-const currentRouteName = computed(() => {
-  return route.name || 'Dashboard';
-});
-
-const handleLogout = async () => {
-  await authStore.logout();
-  router.push('/login');
-};
+const isSidebarOpen = ref(false);
 </script>
 
 <style scoped>

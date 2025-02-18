@@ -1,17 +1,9 @@
 import { defineStore } from 'pinia';
-import { 
-  signInWithEmailAndPassword,
-  signOut,
-  sendPasswordResetEmail as firebaseSendPasswordResetEmail,
-  confirmPasswordReset,
-  verifyPasswordResetCode,
-  onAuthStateChanged,
-  User,
-  updateProfile
-} from 'firebase/auth';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { ref } from 'vue';
 import { auth, db } from '../firebase/config';
-import router from '../router';
+import { collection, doc, getDoc } from 'firebase/firestore';
+import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+import { logger } from '../utils/logger';
 
 interface UserData {
   id: string;
@@ -22,7 +14,7 @@ interface UserData {
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    user: null as User | null,
+    user: null as any | null,
     loading: false,
     error: null as string | null,
     userData: null as UserData | null,
@@ -42,19 +34,19 @@ export const useAuthStore = defineStore('auth', {
   actions: {
     setLoading(value: boolean) {
       this.loading = value;
-      console.log('Loading:', value);
+      logger.debug('Loading:', value);
     },
 
     async initAuth() {
-      console.log('Iniciando autenticação...');
+      logger.debug('Auth: Iniciando autenticação...');
       if (this.initialized) {
-        console.log('Autenticação já inicializada');
+        logger.debug('Auth: Autenticação já inicializada');
         return;
       }
 
       return new Promise((resolve) => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
-          console.log('Estado de autenticação alterado:', user ? 'Usuário logado' : 'Usuário deslogado');
+          logger.debug('Auth: Estado de autenticação alterado:', user ? 'Usuário logado' : 'Usuário deslogado');
           
           if (user) {
             try {
@@ -65,14 +57,14 @@ export const useAuthStore = defineStore('auth', {
                   id: userDoc.id,
                   ...userDoc.data()
                 };
-                console.log('Dados do usuário carregados:', {
+                logger.debug('Auth: Dados do usuário carregados:', {
                   uid: user.uid,
                   role: this.userData.role,
                   status: this.userData.status
                 });
               }
             } catch (error) {
-              console.error('Erro ao carregar dados do usuário:', error);
+              logger.error('Auth: Erro ao carregar dados do usuário:', error);
               this.user = null;
               this.userData = null;
             }
@@ -123,7 +115,7 @@ export const useAuthStore = defineStore('auth', {
         };
 
       } catch (error: any) {
-        console.error('Erro no login:', error);
+        logger.error('Auth: Erro no login:', error);
         this.error = this.getErrorMessage(error.code);
         throw error;
       } finally {
@@ -132,16 +124,16 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async logout() {
-      console.log('Iniciando logout...');
+      logger.debug('Auth: Iniciando logout...');
       this.setLoading(true);
       try {
         await signOut(auth);
         this.user = null;
         this.userData = null;
         router.push('/login');
-        console.log('Logout realizado com sucesso');
+        logger.debug('Auth: Logout realizado com sucesso');
       } catch (error: any) {
-        console.error('Erro no logout:', error);
+        logger.error('Auth: Erro no logout:', error);
         this.error = error.message;
       } finally {
         this.setLoading(false);
@@ -153,7 +145,7 @@ export const useAuthStore = defineStore('auth', {
         await verifyPasswordResetCode(auth, code);
         return true;
       } catch (error) {
-        console.error('Erro ao verificar código de redefinição:', error);
+        logger.error('Auth: Erro ao verificar código de redefinição:', error);
         throw error;
       }
     },
@@ -165,7 +157,7 @@ export const useAuthStore = defineStore('auth', {
         await confirmPasswordReset(auth, code, newPassword);
         return true;
       } catch (error: any) {
-        console.error('Erro ao redefinir senha:', error);
+        logger.error('Auth: Erro ao redefinir senha:', error);
         this.error = this.getErrorMessage(error.code) || 'Erro ao redefinir senha';
         throw error;
       } finally {
@@ -179,6 +171,7 @@ export const useAuthStore = defineStore('auth', {
       try {
         await firebaseSendPasswordResetEmail(auth, email);
       } catch (error: any) {
+        logger.error('Auth: Erro ao enviar email de redefinição de senha:', error);
         this.error = this.getErrorMessage(error.code);
         throw error;
       } finally {
@@ -189,6 +182,7 @@ export const useAuthStore = defineStore('auth', {
     async refreshUserData() {
       if (this.user?.uid) {
         try {
+          logger.debug(`Auth: Carregando dados do usuário - ${this.user.email}`);
           const userDoc = await getDoc(doc(db, 'users', this.user.uid));
           if (userDoc.exists()) {
             this.userData = {
@@ -197,7 +191,7 @@ export const useAuthStore = defineStore('auth', {
             } as UserData;
           }
         } catch (error) {
-          console.error('Erro ao atualizar dados do usuário:', error);
+          logger.error('Auth: Erro ao atualizar dados do usuário:', error);
         }
       }
     },
@@ -222,7 +216,7 @@ export const useAuthStore = defineStore('auth', {
         
         return true;
       } catch (error) {
-        console.error('Erro ao atualizar foto do perfil:', error);
+        logger.error('Auth: Erro ao atualizar foto do perfil:', error);
         throw error;
       }
     },

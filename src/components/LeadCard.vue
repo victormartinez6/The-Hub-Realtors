@@ -2,6 +2,7 @@
 import { defineProps, defineEmits, computed, onMounted } from 'vue';
 import { useLeadsStore } from '../stores/leads';
 import { useUserManagementStore } from '../stores/userManagement';
+import { logger } from '../utils/logger';
 
 const props = defineProps({
   lead: {
@@ -52,20 +53,20 @@ const formatDate = (date: string) => {
 };
 
 const formatCurrency = (value) => {
-  console.log('Formatando valor:', value, typeof value);
+  logger.debug('Formatando valor:', value, typeof value);
   
   // Se o valor for falsy (0, null, undefined, etc)
   if (value === null || value === undefined) {
-    console.log('Valor é null ou undefined');
+    logger.debug('Valor é null ou undefined');
     return 'Valor não definido';
   }
   
   // Garante que o valor seja um número
   const numValue = Number(value);
-  console.log('Valor convertido para número:', numValue, typeof numValue);
+  logger.debug('Valor convertido para número:', numValue, typeof numValue);
   
   if (isNaN(numValue)) {
-    console.error('Valor inválido para formatação:', value);
+    logger.error('Valor inválido para formatação:', value);
     return 'Valor não definido';
   }
 
@@ -76,10 +77,10 @@ const formatCurrency = (value) => {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(numValue);
-    console.log('Valor formatado:', formatted);
+    logger.debug('Valor formatado:', formatted);
     return formatted;
   } catch (error) {
-    console.error('Erro ao formatar valor:', error);
+    logger.error('Erro ao formatar valor:', error);
     return 'Valor não definido';
   }
 };
@@ -118,7 +119,7 @@ const getUserPhotoUrl = (userId) => {
 const getUserName = (userId) => {
   const user = userManagementStore.users.find(u => u.id === userId);
   if (!user) {
-    console.warn(`Usuário não encontrado para o ID: ${userId}`);
+    logger.warn(`Usuário não encontrado para o ID: ${userId}`);
     return 'Carregando...';
   }
   return user.displayName || user.email || 'Sem nome';

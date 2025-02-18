@@ -1,16 +1,5 @@
 <template>
   <div class="p-6">
-    <!-- Cabeçalho -->
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-semibold text-gray-900">Gerenciamento de Usuários</h1>
-      <button
-        @click="openNewUserModal"
-        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-      >
-        Novo Usuário
-      </button>
-    </div>
-
     <!-- Filtros -->
     <div class="mb-6 flex gap-4">
       <div class="flex-1">
@@ -43,6 +32,12 @@
           <option value="blocked">Bloqueado</option>
         </select>
       </div>
+      <button
+        @click="openNewUserModal"
+        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ml-4"
+      >
+        Novo Usuário
+      </button>
     </div>
 
     <!-- Loading -->

@@ -90,20 +90,142 @@
               required
             />
           </div>
-          <div class="flex justify-end space-x-3">
-            <button
-              type="button"
-              @click="closeModal"
-              class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#012928]"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              class="px-4 py-2 text-sm font-medium text-white bg-[#012928] border border-transparent rounded-md shadow-sm hover:bg-[#012928]/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#012928]"
-            >
-              {{ editingUser ? 'Salvar' : 'Criar' }}
-            </button>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">WhatsApp</label>
+            <div class="relative mt-1 flex rounded-md shadow-sm">
+              <!-- Seletor de País -->
+              <div class="relative">
+                <button
+                  type="button"
+                  @click="showCountryList = !showCountryList"
+                  class="inline-flex items-center px-3 py-2 border border-r-0 border-gray-300 rounded-l-md bg-gray-50 text-gray-500 sm:text-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#012928]"
+                >
+                  <span class="mr-2">{{ selectedCountry?.flag }}</span>
+                  <span>+{{ selectedCountry?.dialCode }}</span>
+                  <svg class="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                <!-- Lista de Países -->
+                <div
+                  v-if="showCountryList"
+                  class="absolute z-10 mt-1 w-72 rounded-md bg-white shadow-lg"
+                >
+                  <div class="p-2">
+                    <input
+                      type="text"
+                      v-model="countrySearchQuery"
+                      placeholder="Buscar país ou código..."
+                      class="block w-full rounded-md border-gray-300 shadow-sm focus:border-[#012928] focus:ring-[#012928] sm:text-sm"
+                    />
+                  </div>
+                  <ul
+                    class="max-h-60 overflow-auto py-1"
+                    @click="showCountryList = false"
+                  >
+                    <li
+                      v-for="country in filteredCountries"
+                      :key="country.code"
+                      @click="selectedCountry = country"
+                      class="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                    >
+                      <span class="mr-3 text-lg">{{ country.flag }}</span>
+                      <span class="flex-1">{{ country.name }}</span>
+                      <span class="text-gray-500">+{{ country.dialCode }}</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- Campo de Telefone -->
+              <input
+                type="tel"
+                v-model="userForm.phone"
+                @input="formatPhone"
+                :placeholder="selectedCountry?.code === 'BR' ? '(11) 98765-4321' : '(555) 123-4567'"
+                class="flex-1 block w-full rounded-none rounded-r-md border-gray-300 focus:border-[#012928] focus:ring-[#012928] sm:text-sm"
+                required
+              />
+            </div>
+            <p v-if="phoneError" class="mt-1 text-sm text-red-600">{{ phoneError }}</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Endereço</label>
+            <input
+              type="text"
+              ref="addressInput"
+              v-model="userForm.streetAddress"
+              placeholder="Digite o endereço..."
+              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#012928] focus:ring-[#012928] sm:text-sm"
+              required
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Complemento</label>
+              <input
+                type="text"
+                v-model="userForm.unit"
+                placeholder="Apt, Suite, etc."
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#012928] focus:ring-[#012928] sm:text-sm"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Cidade</label>
+              <input
+                type="text"
+                v-model="userForm.city"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#012928] focus:ring-[#012928] sm:text-sm bg-gray-50"
+                required
+                readonly
+              />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Estado</label>
+              <input
+                type="text"
+                v-model="userForm.state"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#012928] focus:ring-[#012928] sm:text-sm bg-gray-50"
+                required
+                readonly
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">CEP</label>
+              <input
+                type="text"
+                v-model="userForm.zipCode"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#012928] focus:ring-[#012928] sm:text-sm bg-gray-50"
+                required
+                readonly
+              />
+            </div>
+          </div>
+          <div class="space-y-4">
+            <p v-if="errorMessage" class="text-sm text-red-600 bg-red-50 p-2 rounded">
+              {{ errorMessage }}
+            </p>
+
+            <div class="flex justify-end space-x-3">
+              <button
+                type="button"
+                @click="closeModal"
+                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#012928]"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                class="px-4 py-2 text-sm font-medium text-white bg-[#012928] border border-transparent rounded-md shadow-sm hover:bg-[#012928]/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#012928]"
+              >
+                {{ editingUser ? 'Salvar' : 'Criar' }}
+              </button>
+            </div>
           </div>
         </form>
       </template>
@@ -112,12 +234,20 @@
 </template>
 
 <script setup lang="ts">
+declare global {
+  interface Window {
+    google: typeof google;
+  }
+}
+
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useAuthStore } from '../../stores/auth';
 import { userService } from '../../services/userService';
 import Modal from '../../components/Modal.vue';
 import UserListItem from '../../components/UserListItem.vue';
 import { useUserManagementStore } from '../../stores/userManagement';
+import { parsePhoneNumber, isValidPhoneNumber } from 'libphonenumber-js';
+import { countries } from '../../utils/countries';
 
 const authStore = useAuthStore();
 const userManagementStore = useUserManagementStore();
@@ -127,25 +257,178 @@ const searchQuery = ref('');
 const selectedStatus = ref('all');
 const isModalOpen = ref(false);
 const editingUser = ref(null);
+const addressInput = ref(null);
+const phoneError = ref('');
+const errorMessage = ref('');
+let autocomplete: google.maps.places.Autocomplete | null = null;
+let refreshInterval: number | null = null;
+
+// Formulário com campos adicionais
 const userForm = ref({
   displayName: '',
   email: '',
+  phone: '',
+  streetAddress: '',
+  unit: '',
+  city: '',
+  state: '',
+  zipCode: '',
 });
 
 // Computed para filtrar realtors
 const filteredRealtors = computed(() => {
+  console.log('Filtrando realtors:', realtors.value);
   return realtors.value.filter(realtor => {
     const matchesSearch = searchQuery.value === '' ||
       realtor.displayName.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
       realtor.email.toLowerCase().includes(searchQuery.value.toLowerCase());
 
     const matchesStatus = selectedStatus.value === 'all' ||
-      (selectedStatus.value === 'active' && realtor.active) ||
-      (selectedStatus.value === 'blocked' && !realtor.active);
+      (selectedStatus.value === 'active' && realtor.status === 'active') ||
+      (selectedStatus.value === 'blocked' && realtor.status === 'blocked');
 
     return matchesSearch && matchesStatus;
   });
 });
+
+// Seletor de País
+const selectedCountry = ref(countries.find(c => c.code === 'US'));
+const showCountryList = ref(false);
+const countrySearchQuery = ref('');
+
+// Computed para filtrar países
+const filteredCountries = computed(() => {
+  const query = countrySearchQuery.value.toLowerCase();
+  const preferred = countries.filter(c => c.preferred);
+  const others = countries.filter(c => !c.preferred);
+  
+  if (!query) {
+    return [...preferred, ...others];
+  }
+  
+  return countries.filter(country => 
+    country.name.toLowerCase().includes(query) || 
+    country.dialCode.includes(query)
+  );
+});
+
+// Inicializar Google Places Autocomplete
+const initGooglePlaces = () => {
+  if (!window.google?.maps?.places) {
+    console.warn('Google Maps API não disponível. Tentando novamente em 500ms...');
+    setTimeout(initGooglePlaces, 500);
+    return;
+  }
+
+  if (!addressInput.value) {
+    console.warn('Elemento de endereço não encontrado. Tentando novamente em 500ms...');
+    setTimeout(initGooglePlaces, 500);
+    return;
+  }
+  
+  try {
+    const options = {
+      componentRestrictions: { country: 'us' },
+      fields: ['address_components', 'formatted_address'],
+    };
+    
+    autocomplete = new google.maps.places.Autocomplete(addressInput.value, options);
+    autocomplete.addListener('place_changed', handlePlaceSelect);
+    console.log('Google Places inicializado com sucesso!');
+  } catch (error) {
+    console.error('Erro ao inicializar Google Places:', error);
+    // Se houver erro, desabilita a validação do endereço
+    addressInput.value.removeAttribute('required');
+  }
+};
+
+// Manipular seleção de endereço
+const handlePlaceSelect = () => {
+  if (!autocomplete) return;
+  
+  const place = autocomplete.getPlace();
+  if (!place.address_components) return;
+
+  // Reset form address fields
+  userForm.value.city = '';
+  userForm.value.state = '';
+  userForm.value.zipCode = '';
+
+  // Parse address components
+  for (const component of place.address_components) {
+    const type = component.types[0];
+    
+    switch (type) {
+      case 'street_number':
+        userForm.value.streetAddress = component.long_name;
+        break;
+      case 'route':
+        userForm.value.streetAddress += ' ' + component.long_name;
+        break;
+      case 'locality':
+        userForm.value.city = component.long_name;
+        break;
+      case 'administrative_area_level_1':
+        userForm.value.state = component.short_name;
+        break;
+      case 'postal_code':
+        userForm.value.zipCode = component.long_name;
+        break;
+    }
+  }
+};
+
+// Formatar número de telefone baseado no país
+const formatPhone = () => {
+  let phone = userForm.value.phone.replace(/\D/g, '');
+  
+  if (selectedCountry.value?.code === 'US') {
+    if (phone.length > 0) {
+      if (phone.length <= 3) {
+        phone = `(${phone}`;
+      } else if (phone.length <= 6) {
+        phone = `(${phone.slice(0, 3)}) ${phone.slice(3)}`;
+      } else {
+        phone = `(${phone.slice(0, 3)}) ${phone.slice(3, 6)}-${phone.slice(6, 10)}`;
+      }
+    }
+  } else if (selectedCountry.value?.code === 'BR') {
+    if (phone.length > 0) {
+      if (phone.length <= 2) {
+        phone = `(${phone}`;
+      } else if (phone.length <= 7) {
+        phone = `(${phone.slice(0, 2)}) ${phone.slice(2)}`;
+      } else {
+        phone = `(${phone.slice(0, 2)}) ${phone.slice(2, 7)}-${phone.slice(7, 11)}`;
+      }
+    }
+  }
+  
+  userForm.value.phone = phone;
+  validatePhone();
+};
+
+// Validar telefone
+const validatePhone = () => {
+  try {
+    if (!userForm.value.phone) {
+      phoneError.value = 'Telefone é obrigatório';
+      return false;
+    }
+
+    const phoneNumber = `+${selectedCountry.value?.dialCode}${userForm.value.phone.replace(/\D/g, '')}`;
+    if (!isValidPhoneNumber(phoneNumber, selectedCountry.value?.code)) {
+      phoneError.value = 'Número de telefone inválido';
+      return false;
+    }
+
+    phoneError.value = '';
+    return true;
+  } catch (error) {
+    phoneError.value = 'Número de telefone inválido';
+    return false;
+  }
+};
 
 // Carregar realtors do broker atual
 const loadRealtors = async () => {
@@ -154,29 +437,45 @@ const loadRealtors = async () => {
     const currentUser = authStore.user;
     if (!currentUser) throw new Error('Usuário não autenticado');
 
-    // Buscar realtors usando o userManagementStore
     await userManagementStore.fetchBrokerRealtors(currentUser.uid);
-    realtors.value = userManagementStore.getBrokerRealtors(currentUser.uid);
+    realtors.value = userManagementStore.realtors;
+    console.log('Realtors carregados:', realtors.value);
   } catch (error) {
     console.error('Erro ao carregar realtors:', error);
+    errorMessage.value = error instanceof Error ? error.message : 'Erro ao carregar realtors';
   } finally {
     loading.value = false;
   }
 };
 
-// Métodos do modal
-const openNewUserModal = () => {
-  editingUser.value = null;
+const resetForm = () => {
   userForm.value = {
     displayName: '',
     email: '',
+    phone: '',
+    streetAddress: '',
+    unit: '',
+    city: '',
+    state: '',
+    zipCode: '',
   };
+  phoneError.value = '';
+  errorMessage.value = '';
+};
+
+const openNewUserModal = () => {
+  editingUser.value = null;
+  resetForm();
   isModalOpen.value = true;
+  // Inicializar Google Places após o modal estar visível
+  setTimeout(() => {
+    initGooglePlaces();
+  }, 100);
 };
 
 const closeModal = () => {
   isModalOpen.value = false;
-  editingUser.value = null;
+  resetForm();
 };
 
 const editUser = (user) => {
@@ -184,44 +483,56 @@ const editUser = (user) => {
   userForm.value = {
     displayName: user.displayName,
     email: user.email,
+    phone: user.phone || '',
+    streetAddress: user.streetAddress || '',
+    unit: user.unit || '',
+    city: user.city || '',
+    state: user.state || '',
+    zipCode: user.zipCode || '',
   };
   isModalOpen.value = true;
+  // Inicializar Google Places após o modal estar visível
+  setTimeout(() => {
+    initGooglePlaces();
+  }, 100);
 };
 
-// Ações de usuário
 const saveUser = async () => {
+  if (!validatePhone()) return;
+  errorMessage.value = '';
+
   try {
     const currentUser = authStore.user;
     if (!currentUser) throw new Error('Usuário não autenticado');
 
+    const userData = {
+      displayName: userForm.value.displayName,
+      email: userForm.value.email,
+      role: 'realtor',
+      status: 'active',
+      phone: userForm.value.phone,
+      countryCode: selectedCountry.value?.code,
+      streetAddress: userForm.value.streetAddress,
+      unit: userForm.value.unit,
+      city: userForm.value.city,
+      state: userForm.value.state,
+      zipCode: userForm.value.zipCode,
+      brokerId: currentUser.uid,
+      brokerName: currentUser.displayName,
+      active: true
+    };
+
     if (editingUser.value) {
-      // Atualizar usuário existente
-      await userManagementStore.updateUser(editingUser.value, {
-        displayName: userForm.value.displayName,
-      });
+      await userManagementStore.updateUser(editingUser.value.id, userData);
     } else {
-      // Criar novo realtor
-      const userData = {
-        displayName: userForm.value.displayName,
-        email: userForm.value.email,
-        role: 'realtor',
-        brokerId: currentUser.uid,
-        brokerName: currentUser.displayName,
-        status: 'active'
-      };
-
-      // Criar usuário usando o userManagementStore
       await userManagementStore.createUser(userData);
-
-      // Fechar o modal e recarregar a lista
-      closeModal();
-      await loadRealtors();
     }
 
+    await loadRealtors();
     closeModal();
   } catch (error) {
     console.error('Erro ao salvar usuário:', error);
-    alert(error.message || 'Erro ao salvar usuário. Por favor, tente novamente.');
+    errorMessage.value = error instanceof Error ? error.message : 'Erro ao salvar usuário';
   }
 };
 
@@ -257,12 +568,8 @@ const toggleUserStatus = async (userId: string, currentStatus: string) => {
   }
 };
 
-let refreshInterval: number | null = null;
-
 onMounted(async () => {
   await loadRealtors();
-  // Atualizar a lista a cada 30 segundos
-  refreshInterval = window.setInterval(loadRealtors, 30000);
 });
 
 onUnmounted(() => {

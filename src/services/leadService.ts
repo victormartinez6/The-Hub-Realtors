@@ -4,6 +4,7 @@ import { FileAttachment } from './fileService';
 import { webhookService } from './webhookService';
 import { userService } from './userService';
 import type { Lead } from '../types/models';
+import { logger } from '../utils/logger';
 
 const COLLECTION_NAME = 'leads';
 const leadsCollection = collection(db, COLLECTION_NAME);
@@ -42,7 +43,7 @@ async function getCurrentUserWithRole() {
 export const leadService = {
   async getLeads(): Promise<Lead[]> {
     const user = await getCurrentUserWithRole();
-    console.log('LeadService - Buscando leads para usuário:', user);
+    logger.debug(`LeadService: Buscando leads para ${user.displayName}`);
 
     let querySnapshots: any[] = [];
 
@@ -124,13 +125,13 @@ export const leadService = {
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
-    console.log('LeadService - Total de leads encontrados:', leads.length);
+    logger.debug(`LeadService: ${leads.length} leads encontrados`);
     return leads;
   },
 
   async addLead(leadData: Omit<Lead, 'id'>): Promise<Lead> {
     const user = await getCurrentUserWithRole();
-    console.log('LeadService - Adicionando lead:', leadData);
+    logger.debug(`LeadService: Adicionando lead: ${JSON.stringify(leadData)}`);
     
     // Garantir que os arrays de realtors e partners sejam sempre arrays válidos
     let assignedRealtors = Array.isArray(leadData.assignedRealtors) ? [...leadData.assignedRealtors] : [];
@@ -139,10 +140,10 @@ export const leadService = {
     // Atribuição automática baseada no papel do usuário
     if (user.role === 'realtor' && !assignedRealtors.includes(user.uid)) {
       assignedRealtors.push(user.uid);
-      console.log('LeadService - Realtor atribuído automaticamente:', user.uid);
+      logger.debug(`LeadService: Realtor atribuído automaticamente: ${user.uid}`);
     } else if (user.role === 'partner' && !assignedPartners.includes(user.uid)) {
       assignedPartners.push(user.uid);
-      console.log('LeadService - Partner atribuído automaticamente:', user.uid);
+      logger.debug(`LeadService: Partner atribuído automaticamente: ${user.uid}`);
     }
     
     // Se for um realtor, precisamos buscar o broker vinculado a ele
@@ -169,11 +170,11 @@ export const leadService = {
       archived: false
     };
 
-    console.log('LeadService - Dados do novo lead:', newLead);
+    logger.debug(`LeadService: Dados do novo lead: ${JSON.stringify(newLead)}`);
 
     // Adicionar ao Firestore
     const docRef = await addDoc(leadsCollection, newLead);
-    console.log('LeadService - Lead adicionado com ID:', docRef.id);
+    logger.debug(`LeadService: Lead adicionado com ID: ${docRef.id}`);
     
     // Notificar via webhook sobre o novo lead
     try {
@@ -210,7 +211,7 @@ export const leadService = {
         });
       }
     } catch (error) {
-      console.warn('Erro ao notificar webhook:', error);
+      logger.error('LeadService: Erro ao notificar webhook:', error);
       // Não vamos impedir a criação do lead se o webhook falhar
     }
     
@@ -293,7 +294,7 @@ export const leadService = {
       updatedAt: new Date().toISOString()
     };
 
-    console.log('LeadService - Atualizando lead:', id, updatedData);
+    logger.debug(`LeadService: Atualizando lead: ${id} ${JSON.stringify(updatedData)}`);
 
     await updateDoc(leadRef, updatedData);
     const updated = { ...currentLead, ...updatedData };
@@ -343,7 +344,7 @@ export const leadService = {
         });
       }
     } catch (error) {
-      console.warn('Erro ao notificar webhook:', error);
+      logger.error('LeadService: Erro ao notificar webhook:', error);
     }
 
     return updated;
@@ -381,7 +382,7 @@ export const leadService = {
     try {
       await webhookService.trigger('lead.deleted', lead);
     } catch (error) {
-      console.warn('Erro ao notificar webhook de lead excluído:', error);
+      logger.error('LeadService: Erro ao notificar webhook de lead excluído:', error);
     }
   },
 
@@ -437,7 +438,7 @@ export const leadService = {
         sharedWith: partnerIds
       });
     } catch (error) {
-      console.warn('Erro ao notificar webhook de lead compartilhado:', error);
+      logger.error('LeadService: Erro ao notificar webhook de lead compartilhado:', error);
     }
   },
 
@@ -463,28 +464,28 @@ export const leadService = {
       });
       
       if (foundLead) {
-        console.log('Lead encontrado:', foundLead);
+        logger.debug(`Lead encontrado: ${JSON.stringify(foundLead)}`);
         return foundLead;
       }
       
-      console.log('Nenhum lead encontrado com este email');
+      logger.debug('Nenhum lead encontrado com este email');
       return null;
     } catch (error) {
-      console.error('Error in getLeadByEmail:', error);
+      logger.error('LeadService: Erro ao buscar lead por email:', error);
       throw error;
     }
   },
 
   async checkLeadExists(id: string): Promise<boolean> {
     try {
-      console.log('Verificando existência do lead:', id);
+      logger.debug(`Verificando existência do lead: ${id}`);
       const docRef = doc(leadsCollection, id);
       const docSnap = await getDoc(docRef);
       const exists = docSnap.exists();
-      console.log('Lead existe?', exists);
+      logger.debug(`Lead existe? ${exists}`);
       return exists;
     } catch (error) {
-      console.error('Erro ao verificar existência do lead:', error);
+      logger.error('LeadService: Erro ao verificar existência do lead:', error);
       return false;
     }
   },
@@ -499,7 +500,7 @@ export const leadService = {
       const lead = convertFirestoreData(docSnap);
       return lead;
     } catch (error) {
-      console.error('Error in getLead:', error);
+      logger.error('LeadService: Erro ao buscar lead:', error);
       throw error;
     }
   },
