@@ -147,8 +147,20 @@ const togglePartner = (partnerId: string, event?: Event) => {
   if (event) {
     event.stopPropagation();
   }
-  const newValue = [...props.modelValue, partnerId];
-  emit('update:modelValue', newValue);
+  
+  // Verifica se o parceiro já está selecionado
+  const isSelected = props.modelValue.includes(partnerId);
+  
+  if (isSelected) {
+    // Se já estiver selecionado, remove da lista
+    const newValue = props.modelValue.filter(id => id !== partnerId);
+    emit('update:modelValue', newValue);
+  } else {
+    // Se não estiver selecionado, adiciona à lista
+    const newValue = [...props.modelValue, partnerId];
+    emit('update:modelValue', newValue);
+  }
+  
   showDropdown.value = false; // Sempre fecha o dropdown após selecionar
   searchQuery.value = ''; // Limpa a busca após selecionar
 };

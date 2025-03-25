@@ -1,3 +1,5 @@
+import { FileAttachment } from '../services/fileService';
+
 export type UserRole = 'super_admin' | 'broker' | 'realtor' | 'partner';
 
 export interface User {
@@ -46,6 +48,7 @@ export interface Lead {
   };
   lastContact?: string;
   nextFollowUp?: string;
+  attachments?: FileAttachment[]; 
 }
 
 export interface Broker {

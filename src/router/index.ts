@@ -11,6 +11,18 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/instahub',
+      name: 'instahub',
+      component: () => import('../views/InstaHubFeed.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/instahub/profile/:id',
+      name: 'userProfileInstaHub',
+      component: () => import('../views/UserProfileInstaHub.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/login',
       name: 'login',
       component: () => import('../views/Login.vue'),

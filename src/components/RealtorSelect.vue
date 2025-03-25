@@ -25,13 +25,13 @@
     <div v-if="modelValue.length > 0" class="mt-2 flex flex-wrap gap-2">
       <div
         v-for="realtorId in modelValue"
-        :key="realtorId"
+        :key="realtorId as string"
         class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800"
       >
-        {{ getRealtorName(realtorId) }}
+        {{ getRealtorName(realtorId as string) }}
         <button
           type="button"
-          @click.stop="removeRealtor(realtorId, $event)"
+          @click.stop="removeRealtor(realtorId as string, $event)"
           class="ml-1 inline-flex items-center p-0.5 rounded-full text-indigo-400 hover:bg-indigo-200 hover:text-indigo-500 focus:outline-none"
         >
           <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
@@ -94,11 +94,11 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { useUserManagementStore } from '../stores/userManagement';
 import { useAuthStore } from '../stores/auth';
-import debounce from 'lodash/debounce';
+// import debounce from 'lodash/debounce';
 
 const props = defineProps({
   modelValue: {
-    type: Array,
+    type: Array as () => string[],
     required: true,
     default: () => []
   },
@@ -137,19 +137,13 @@ const realtors = computed(() => {
   console.log('[RealtorSelect] Todos usuários:', userManagementStore.users);
   console.log('[RealtorSelect] Realtors selecionados:', props.modelValue);
 
-  return userManagementStore.users.filter(user => {
-    // Se for broker, mostrar todos os realtors ativos
-    if (authStore.userRole === 'broker') {
-      return user.role === 'realtor' && user.status === 'active';
-    }
-    
-    // Se for realtor, mostrar apenas ele mesmo
-    if (authStore.userRole === 'realtor') {
-      return user.id === authStore.user?.uid;
-    }
-    
-    return false;
-  });
+  if (authStore.userRole === 'broker') {
+    return userManagementStore.usersByBroker;
+  } else if (authStore.userRole === 'realtor') {
+    return userManagementStore.users.filter(user => user.id === authStore.user?.uid);
+  }
+  
+  return [];
 });
 
 const filteredRealtors = computed(() => {
@@ -187,12 +181,24 @@ const toggleRealtor = (realtorId: string, event?: Event) => {
   if (event) {
     event.stopPropagation();
   }
+  
+  // Verifica se o realtor já está selecionado
+  const isSelected = props.modelValue.includes(realtorId);
+  
   if (props.multiple) {
-    const newValue = [...props.modelValue, realtorId];
+    // Se for múltipla seleção, adiciona ou remove o realtor da lista
+    let newValue;
+    if (isSelected) {
+      newValue = props.modelValue.filter(id => id !== realtorId);
+    } else {
+      newValue = [...props.modelValue, realtorId];
+    }
     emit('update:modelValue', newValue);
   } else {
+    // Se for seleção única, substitui a seleção atual
     emit('update:modelValue', [realtorId]);
   }
+  
   showDropdown.value = false; // Sempre fecha o dropdown após selecionar
   searchQuery.value = ''; // Limpa a busca após selecionar
 };
@@ -202,7 +208,11 @@ onMounted(async () => {
   console.log('[RealtorSelect] Montando componente...');
   console.log('[RealtorSelect] Role do usuário:', authStore.userRole);
   
-  if (authStore.userRole === 'realtor' || authStore.userRole === 'broker') {
+  if (authStore.userRole === 'broker') {
+    console.log('[RealtorSelect] Carregando realtors do broker...');
+    await userManagementStore.fetchBrokerRealtors(authStore.user?.uid || '');
+    console.log('[RealtorSelect] Realtors carregados:', userManagementStore.usersByBroker.length);
+  } else if (authStore.userRole === 'realtor') {
     console.log('[RealtorSelect] Carregando usuários...');
     await userManagementStore.fetchUsers();
     console.log('[RealtorSelect] Usuários carregados:', userManagementStore.users.length);
@@ -249,7 +259,7 @@ onUnmounted(() => {
 // Recarregar realtors quando o broker mudar
 watch(() => authStore.user?.uid, async (newBrokerId, oldBrokerId) => {
   if (newBrokerId && newBrokerId !== oldBrokerId) {
-    await userManagementStore.fetchUsers();
+    await userManagementStore.fetchBrokerRealtors(newBrokerId);
   }
 });
 

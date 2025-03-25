@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { defineProps, defineEmits, computed, onMounted } from 'vue';
-import { useLeadsStore } from '../stores/leads';
+import { ref, onMounted, computed, defineProps, defineEmits } from 'vue';
 import { useUserManagementStore } from '../stores/userManagement';
 import { logger } from '../utils/logger';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 const props = defineProps({
   lead: {
@@ -19,40 +20,115 @@ const props = defineProps({
   }
 });
 
-onMounted(async () => {
-  console.log('Lead recebido no card:', props.lead);
-  console.log('Assigned Partners:', props.lead.assignedPartners);
-  console.log('Valor do imóvel:', props.lead.propertyValue, typeof props.lead.propertyValue);
+// Função para pré-carregar os dados dos usuários relacionados ao lead
+const preloadUserData = async () => {
+  console.log('Pré-carregando dados dos usuários relacionados ao lead');
   
-  // Carrega os usuários se ainda não foram carregados
-  if (userManagementStore.users.length === 0) {
-    await userManagementStore.fetchUsers();
+  const userIds = new Set<string>();
+  
+  // Adiciona o broker
+  if (props.lead.brokerId) {
+    userIds.add(props.lead.brokerId);
   }
+  
+  // Adiciona os realtors
+  if (props.lead.assignedRealtors && props.lead.assignedRealtors.length > 0) {
+    props.lead.assignedRealtors.forEach((id: string) => userIds.add(id));
+  }
+  
+  // Adiciona os partners
+  if (props.lead.assignedPartners && props.lead.assignedPartners.length > 0) {
+    props.lead.assignedPartners.forEach((id: string) => userIds.add(id));
+  }
+  
+  console.log(`Total de usuários a carregar: ${userIds.size}`);
+  
+  // Carrega os dados de cada usuário
+  const promises = Array.from(userIds).map(async (userId) => {
+    try {
+      // Primeiro tenta buscar do store
+      if (!userManagementStore.users.some(u => u.id === userId)) {
+        console.log(`Buscando dados do usuário ${userId} no Firestore`);
+        
+        // Busca diretamente do Firestore para garantir dados atualizados
+        const userDoc = await getDoc(doc(db, 'users', userId));
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          console.log(`Dados do usuário ${userId} obtidos do Firestore:`, userData);
+          
+          // Pré-carrega a foto do usuário
+          if (userData.photoURL) {
+            console.log(`Pré-carregando photoURL para ${userId}: ${userData.photoURL}`);
+            Object.assign(userPhotoCache.value, { [userId]: userData.photoURL });
+          } else if (userData.profilePicture) {
+            console.log(`Pré-carregando profilePicture para ${userId}: ${userData.profilePicture}`);
+            Object.assign(userPhotoCache.value, { [userId]: userData.profilePicture });
+          } else {
+            // Se não tiver foto, deixa vazio para mostrar as iniciais
+            console.log(`Usuário ${userId} não tem foto de perfil`);
+            Object.assign(userPhotoCache.value, { [userId]: '' });
+          }
+          
+          // Pré-carrega o nome do usuário
+          Object.assign(userNameCache.value, { [userId]: userData.displayName || 'Usuário' });
+        } else {
+          console.error(`Usuário ${userId} não encontrado no Firestore`);
+        }
+      } else {
+        console.log(`Usuário ${userId} já está carregado no store`);
+        const user = userManagementStore.users.find(u => u.id === userId);
+        if (user) {
+          // Pré-carrega a foto do usuário
+          if (user.photoURL) {
+            Object.assign(userPhotoCache.value, { [userId]: user.photoURL });
+          } else if (user.profilePicture) {
+            Object.assign(userPhotoCache.value, { [userId]: user.profilePicture });
+          } else {
+            // Se não tiver foto, deixa vazio para mostrar as iniciais
+            Object.assign(userPhotoCache.value, { [userId]: '' });
+          }
+          
+          // Pré-carrega o nome do usuário
+          Object.assign(userNameCache.value, { [userId]: user.displayName || 'Usuário' });
+        }
+      }
+    } catch (error) {
+      console.error(`Erro ao carregar dados do usuário ${userId}:`, error);
+    }
+  });
+  
+  // Aguarda todas as promessas serem resolvidas
+  await Promise.all(promises);
+  console.log('Pré-carregamento de dados dos usuários concluído');
+};
+
+// Carrega os dados dos usuários quando o componente é montado
+onMounted(async () => {
+  console.log('LeadCard montado, carregando dados dos usuários');
+  await preloadUserData();
 });
 
 const emit = defineEmits([
   'edit',
-  'delete',
   'archive',
   'openNotes',
   'reactivate',
   'view-files'
 ]);
 
-const leadsStore = useLeadsStore();
 const userManagementStore = useUserManagementStore();
 
-const formatDate = (date: string) => {
-  return new Date(date).toLocaleDateString('pt-BR', {
+const formatDate = (value: Date | string | null | undefined): string => {
+  if (!value) return 'N/A';
+  return new Date(value as string | number | Date).toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
   });
 };
 
-const formatCurrency = (value) => {
+const formatCurrency = (value: any) => {
   logger.debug('Formatando valor:', value, typeof value);
   
   // Se o valor for falsy (0, null, undefined, etc)
@@ -85,55 +161,141 @@ const formatCurrency = (value) => {
   }
 };
 
-const getStatusColor = (status) => {
-  switch (status) {
-    case 'new':
-      return 'bg-blue-100 text-blue-800';
-    case 'contacted':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'qualified':
-      return 'bg-green-100 text-green-800';
-    case 'lost':
-      return 'bg-red-100 text-red-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-};
-
-const getPriorityColor = (priority) => {
-  const colors = {
-    low: 'bg-gray-100 text-gray-700',
-    medium: 'bg-yellow-100 text-yellow-700',
-    high: 'bg-red-100 text-red-700'
+const getPriorityColor = (priority: string): string => {
+  const priorityColors: Record<string, string> = {
+    low: 'bg-green-100 text-green-800',
+    medium: 'bg-yellow-100 text-yellow-800',
+    high: 'bg-red-100 text-red-800'
   };
-  return colors[priority] || 'bg-gray-100 text-gray-700';
+  return priorityColors[priority] || 'bg-gray-100 text-gray-800';
 };
 
 const hasNotes = computed(() => props.lead.notes && props.lead.notes.length > 0);
 
-const getUserPhotoUrl = (userId) => {
-  const user = userManagementStore.users.find(u => u.id === userId);
-  return user?.photoURL || '/default-avatar.png';
-};
+// Cache para armazenar as URLs das fotos dos usuários
+const userPhotoCache = ref<Record<string, string>>({});
 
-const getUserName = (userId) => {
-  const user = userManagementStore.users.find(u => u.id === userId);
-  if (!user) {
-    logger.warn(`Usuário não encontrado para o ID: ${userId}`);
-    return 'Carregando...';
+// Função síncrona que retorna a URL da foto do usuário do cache ou inicia a busca assíncrona
+const getUserPhotoUrl = (userId: string): string => {
+  // Verificação de segurança
+  if (!userId) {
+    console.warn('getUserPhotoUrl chamado com userId vazio');
+    return '';
   }
-  return user.displayName || user.email || 'Sem nome';
-};
 
-const deleteLead = async () => {
-  if (confirm('Tem certeza que deseja excluir este lead?')) {
-    try {
-      await leadsStore.deleteLead(props.lead.id);
-      emit('delete', props.lead.id);
-    } catch (error) {
-      alert(error instanceof Error ? error.message : 'Erro ao excluir lead');
+  // Se a URL já estiver no cache, retorna imediatamente
+  if (userPhotoCache.value[userId]) {
+    console.log(`Usando URL do cache para ${userId}: ${userPhotoCache.value[userId]}`);
+    return userPhotoCache.value[userId];
+  }
+  
+  // Verifica se o usuário já está na lista
+  const user = userManagementStore.users.find(u => u.id === userId);
+  if (user) {
+    console.log(`Usuário encontrado na lista para ${userId}: ${user.displayName}`);
+    
+    // Busca a foto do perfil do usuário
+    if (user.photoURL) {
+      console.log(`Usando photoURL para ${userId}: ${user.photoURL}`);
+      Object.assign(userPhotoCache.value, { [userId]: user.photoURL });
+      return user.photoURL;
+    } 
+    else if (user.profilePicture) {
+      console.log(`Usando profilePicture para ${userId}: ${user.profilePicture}`);
+      Object.assign(userPhotoCache.value, { [userId]: user.profilePicture });
+      return user.profilePicture;
     }
+    
+    // Se não tiver foto, busca diretamente no Firestore
+    console.log(`Usuário ${userId} não tem foto no cache, buscando no Firestore...`);
   }
+  
+  console.log(`Usuário não encontrado na lista para ${userId}, buscando no Firestore...`);
+  
+  // URL vazia enquanto a busca assíncrona está em andamento
+  const loadingUrl = '';
+  
+  // Inicia a busca assíncrona e atualiza o cache quando concluída
+  getDoc(doc(db, 'users', userId)).then(userDoc => {
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      console.log(`Dados do usuário ${userId} obtidos diretamente do Firestore:`, userData);
+      
+      let photoUrl = null;
+      
+      if (userData.photoURL) {
+        photoUrl = userData.photoURL;
+        console.log(`Usando photoURL do Firestore para ${userId}: ${photoUrl}`);
+      } else if (userData.profilePicture) {
+        photoUrl = userData.profilePicture;
+        console.log(`Usando profilePicture do Firestore para ${userId}: ${photoUrl}`);
+      }
+      
+      if (photoUrl) {
+        console.log(`Atualizando cache com foto do Firestore para ${userId}: ${photoUrl}`);
+        Object.assign(userPhotoCache.value, { [userId]: photoUrl });
+      } else {
+        // Se não tiver foto, deixa vazio para mostrar as iniciais
+        console.log(`Usuário ${userId} não tem foto de perfil`);
+        Object.assign(userPhotoCache.value, { [userId]: '' });
+      }
+    } else {
+      console.error(`Usuário ${userId} não encontrado no Firestore`);
+      Object.assign(userPhotoCache.value, { [userId]: '' });
+    }
+  }).catch(error => {
+    console.error(`Erro ao buscar usuário ${userId} no Firestore:`, error);
+    Object.assign(userPhotoCache.value, { [userId]: '' });
+  });
+  
+  // Retorna a URL vazia enquanto a busca assíncrona está em andamento
+  return loadingUrl;
+};
+
+// Cache para armazenar os nomes dos usuários
+const userNameCache = ref<Record<string, string>>({});
+
+// Função síncrona que retorna o nome do usuário do cache ou inicia a busca assíncrona
+const getUserName = (userId: string): string => {
+  // Verificação de segurança
+  if (!userId) {
+    console.warn('getUserName chamado com userId vazio');
+    return 'Usuário';
+  }
+
+  // Se o nome já estiver no cache, retorna imediatamente
+  if (userNameCache.value[userId]) {
+    return userNameCache.value[userId];
+  }
+  
+  // Nome padrão enquanto a busca assíncrona está em andamento
+  const defaultName = 'Carregando...';
+  
+  // Verifica se o usuário já está na lista
+  const user = userManagementStore.users.find(u => u.id === userId);
+  if (user) {
+    const name = user.displayName || 'Usuário';
+    Object.assign(userNameCache.value, { [userId]: name });
+    return name;
+  }
+  
+  // Inicia a busca assíncrona e atualiza o cache quando concluída
+  getDoc(doc(db, 'users', userId)).then(userDoc => {
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      const name = userData.displayName || 'Usuário';
+      console.log(`Nome do usuário ${userId} obtido do Firestore: ${name}`);
+      Object.assign(userNameCache.value, { [userId]: name });
+    } else {
+      console.error(`Usuário ${userId} não encontrado no Firestore`);
+      Object.assign(userNameCache.value, { [userId]: 'Usuário não encontrado' });
+    }
+  }).catch(error => {
+    console.error(`Erro ao buscar nome do usuário ${userId}:`, error);
+    Object.assign(userNameCache.value, { [userId]: 'Erro' });
+  });
+  
+  return defaultName;
 };
 
 const handleCardClick = () => {
@@ -148,6 +310,7 @@ const getWhatsAppLink = (countryCode: string, phone: string) => {
 const formatPhoneDisplay = (countryCode: string, phone: string) => {
   return `+${countryCode} ${phone}`;
 };
+
 </script>
 
 <template>
@@ -163,13 +326,13 @@ const formatPhoneDisplay = (countryCode: string, phone: string) => {
         </h3>
         <div class="flex items-center space-x-2">
           <button
-            @click.stop="$emit('open-notes', lead)"
+            @click.stop="$emit('openNotes', lead)"
             class="p-1.5 text-gray-400 hover:text-indigo-600 transition-colors duration-200 rounded-full hover:bg-indigo-50"
             :class="{ 'text-indigo-600 bg-indigo-50': hasNotes }"
             :title="hasNotes ? 'Ver observações' : 'Sem observações'"
           >
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h10m-10 4h10M3 5a2 2 0 012-2h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5z" />
             </svg>
           </button>
         </div>
@@ -222,22 +385,44 @@ const formatPhoneDisplay = (countryCode: string, phone: string) => {
             <!-- Para partners: mostrar broker e realtor -->
             <template v-if="userType === 'partner'">
               <div v-if="lead.brokerId" class="relative group">
-                <img
-                  :src="getUserPhotoUrl(lead.brokerId)"
-                  :alt="getUserName(lead.brokerId)"
-                  class="w-8 h-8 rounded-full border-2 border-white object-cover"
-                >
+                <div class="relative w-8 h-8">
+                  <img
+                    v-if="getUserPhotoUrl(lead.brokerId)"
+                    :src="getUserPhotoUrl(lead.brokerId)"
+                    :alt="getUserName(lead.brokerId)"
+                    class="w-8 h-8 rounded-full border-2 border-white object-cover"
+                    @error="() => { console.error(`Erro ao carregar imagem do parceiro ${lead.brokerId}`); Object.assign(userPhotoCache.value, { [lead.brokerId]: '' }); }"
+                    @load="() => console.log(`Imagem carregada com sucesso para parceiro: ${lead.brokerId}`)"
+                  >
+                  <div 
+                    v-else
+                    class="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center bg-gray-200" 
+                  >
+                    <span class="text-xs font-bold">{{ getUserName(lead.brokerId).substring(0, 2).toUpperCase() }}</span>
+                  </div>
+                </div>
                 <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 whitespace-nowrap transition-opacity duration-200">
                   Broker: {{ getUserName(lead.brokerId) }}
                 </div>
               </div>
               <template v-if="lead.assignedRealtors && lead.assignedRealtors.length > 0">
                 <div v-for="realtorId in lead.assignedRealtors" :key="realtorId" class="relative group">
-                  <img
-                    :src="getUserPhotoUrl(realtorId)"
-                    :alt="getUserName(realtorId)"
-                    class="w-8 h-8 rounded-full border-2 border-white object-cover"
-                  >
+                  <div class="relative w-8 h-8">
+                    <img
+                      v-if="getUserPhotoUrl(realtorId)"
+                      :src="getUserPhotoUrl(realtorId)"
+                      :alt="getUserName(realtorId)"
+                      class="w-8 h-8 rounded-full border-2 border-white object-cover"
+                      @error="() => { console.error(`Erro ao carregar imagem do parceiro ${realtorId}`); Object.assign(userPhotoCache.value, { [realtorId]: '' }); }"
+                      @load="() => console.log(`Imagem carregada com sucesso para parceiro: ${realtorId}`)"
+                    >
+                    <div 
+                      v-else
+                      class="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center bg-gray-200" 
+                    >
+                      <span class="text-xs font-bold">{{ getUserName(realtorId).substring(0, 2).toUpperCase() }}</span>
+                    </div>
+                  </div>
                   <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 whitespace-nowrap transition-opacity duration-200">
                     Realtor: {{ getUserName(realtorId) }}
                   </div>
@@ -247,13 +432,24 @@ const formatPhoneDisplay = (countryCode: string, phone: string) => {
             <!-- Para realtor/broker: mostrar partners -->
             <template v-else>
               <div v-for="partnerId in lead.assignedPartners" :key="partnerId" class="relative group">
-                <img
-                  :src="getUserPhotoUrl(partnerId)"
-                  :alt="getUserName(partnerId)"
-                  class="w-8 h-8 rounded-full border-2 border-white object-cover"
-                >
+                <div class="relative w-8 h-8">
+                  <img
+                    v-if="getUserPhotoUrl(partnerId)"
+                    :src="getUserPhotoUrl(partnerId)"
+                    :alt="getUserName(partnerId)"
+                    class="w-8 h-8 rounded-full border-2 border-white object-cover"
+                    @error="() => { console.error(`Erro ao carregar imagem do parceiro ${partnerId}`); Object.assign(userPhotoCache.value, { [partnerId]: '' }); }"
+                    @load="() => console.log(`Imagem carregada com sucesso para parceiro: ${partnerId}`)"
+                  >
+                  <div 
+                    v-else
+                    class="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center bg-gray-200" 
+                  >
+                    <span class="text-xs font-bold">{{ getUserName(partnerId).substring(0, 2).toUpperCase() }}</span>
+                  </div>
+                </div>
                 <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 whitespace-nowrap transition-opacity duration-200">
-                  {{ getUserName(partnerId) }}
+                  Partner: {{ getUserName(partnerId) }}
                 </div>
               </div>
             </template>
@@ -278,7 +474,7 @@ const formatPhoneDisplay = (countryCode: string, phone: string) => {
           title="Editar lead"
         >
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
           </svg>
         </button>
 

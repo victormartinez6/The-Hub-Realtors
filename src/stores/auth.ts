@@ -1,8 +1,16 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { auth, db } from '../firebase/config';
-import { collection, doc, getDoc } from 'firebase/firestore';
-import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+import { collection, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { 
+  signInWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged, 
+  sendPasswordResetEmail as firebaseSendPasswordResetEmail,
+  verifyPasswordResetCode,
+  confirmPasswordReset,
+  updateProfile
+} from 'firebase/auth';
 import { logger } from '../utils/logger';
 
 interface UserData {
@@ -130,11 +138,12 @@ export const useAuthStore = defineStore('auth', {
         await signOut(auth);
         this.user = null;
         this.userData = null;
-        router.push('/login');
         logger.debug('Auth: Logout realizado com sucesso');
+        return { success: true };
       } catch (error: any) {
         logger.error('Auth: Erro no logout:', error);
         this.error = error.message;
+        return { success: false, error: error.message };
       } finally {
         this.setLoading(false);
       }

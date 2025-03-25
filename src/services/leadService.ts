@@ -30,7 +30,8 @@ function convertFirestoreData(doc: any): Lead {
     assignedRealtors: Array.isArray(data.assignedRealtors) ? data.assignedRealtors : [],
     assignedPartners: Array.isArray(data.assignedPartners) ? data.assignedPartners : [],
     kanbanColumn: data.kanbanColumn || '',
-    archived: data.archived || false
+    archived: data.archived || false,
+    attachments: Array.isArray(data.attachments) ? data.attachments : []
   } as Lead;
 }
 

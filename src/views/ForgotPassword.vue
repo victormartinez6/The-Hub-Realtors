@@ -8,16 +8,22 @@
     <!-- Formulário -->
     <div class="bg-white w-full md:max-w-md lg:max-w-full md:w-1/2 xl:w-1/3 h-screen px-6 lg:px-16 xl:px-12 flex items-center justify-center">
       <div class="w-full h-100">
-        <img :src="logoFull" alt="The Hub Realtors" class="h-16 mx-auto mb-8">
+        <!-- Espaço em branco antes da logo -->
+        <div class="h-24"></div>
+        
+        <!-- Logo centralizada -->
+        <div class="flex justify-center items-center mb-12">
+          <img :src="logoFull" alt="The Hub Realtors" class="h-48 w-auto" />
+        </div>
 
-        <h1 class="text-xl md:text-2xl font-bold leading-tight mt-12">Esqueceu sua senha?</h1>
+        <h1 class="text-xl md:text-2xl font-bold leading-tight mt-6 text-[#012928]">Esqueceu sua senha?</h1>
         <p class="text-gray-600 mt-2">
           Digite seu email abaixo e enviaremos um link para redefinir sua senha.
         </p>
 
         <form class="mt-6" @submit.prevent="handleSubmit">
           <div>
-            <label class="block text-gray-700">Email</label>
+            <label class="block text-[#012928]">Email</label>
             <div class="relative">
               <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <EnvelopeIcon class="h-5 w-5 text-[#012928]" />
@@ -26,7 +32,7 @@
                 type="email" 
                 placeholder="Digite seu email" 
                 v-model="email"
-                class="w-full pl-10 px-4 py-3 rounded-lg bg-gray-200 mt-2 border focus:border-[#01FBA1] focus:bg-white focus:outline-none transition-all duration-200" 
+                class="w-full pl-10 px-4 py-3 rounded-lg bg-gray-200 mt-2 border focus:border-[#01FBA1] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#01FBA1] transition-all duration-200" 
                 required
                 autofocus
               >
@@ -80,12 +86,11 @@
         </div>
 
         <p class="mt-8 text-center">
-          Lembrou sua senha? 
           <router-link 
             to="/login" 
-            class="text-[#012928] hover:text-[#01FBA1] font-semibold"
+            class="text-sm font-semibold text-[#012928] hover:text-[#01FBA1] transition-colors duration-200"
           >
-            Fazer login
+            Voltar para a tela de login
           </router-link>
         </p>
       </div>

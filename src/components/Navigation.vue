@@ -176,8 +176,14 @@ const filteredNavigation = computed(() => {
 
 // Métodos
 const handleLogout = async () => {
-  await authStore.logout();
-  router.push('/login');
+  try {
+    const result = await authStore.logout();
+    if (result && result.success) {
+      router.push('/login');
+    }
+  } catch (error) {
+    console.error('Erro ao fazer logout:', error);
+  }
 };
 
 // Carregar dados do broker se for um realtor

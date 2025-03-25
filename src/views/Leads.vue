@@ -230,14 +230,22 @@ const openEditLeadModal = async (lead) => {
   showModal.value = true;
 };
 
-const openNotesModal = (lead) => {
-  selectedLead.value = lead;
-  showNotesModal.value = true;
-  newNote.value = '';
-  
-  // Carregar usuários se ainda não foram carregados
-  if (userManagementStore.users.length === 0) {
-    userManagementStore.fetchUsers();
+const openNotesModal = async (lead) => {
+  try {
+    // Buscar os dados mais recentes do lead no Firestore
+    const refreshedLead = await leadService.getLead(lead.id);
+    console.log('Lead carregado para o modal de observações:', refreshedLead);
+    console.log('Anexos do lead:', refreshedLead.attachments);
+    
+    // Atualizar o lead selecionado com os dados mais recentes
+    selectedLead.value = refreshedLead;
+    
+    // Abrir o modal
+    showNotesModal.value = true;
+    newNote.value = '';
+  } catch (error) {
+    console.error('Erro ao abrir modal de observações:', error);
+    alert('Erro ao carregar dados do lead. Por favor, tente novamente.');
   }
 };
 
@@ -290,6 +298,7 @@ const handleLeadSubmit = async (leadData: any) => {
       const finalData = {
         ...leadData,
         assignedPartners: selectedPartners.value,
+        assignedRealtors: selectedRealtors.value, // Adicionar explicitamente os realtors selecionados
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         notes: [],
@@ -421,13 +430,20 @@ const handleFileSelected = async (file: File) => {
       attachments: [...currentAttachments, attachment]
     });
 
-    // Atualizar o lead no store
-    selectedLead.value = updatedLead;
+    // Buscar os dados atualizados do lead para garantir sincronização
+    try {
+      const refreshedLead = await leadService.getLead(selectedLead.value.id);
+      selectedLead.value = refreshedLead;
+    } catch (refreshError) {
+      console.error('Erro ao atualizar dados do lead após upload de arquivo:', refreshError);
+      // Fallback para os dados retornados pelo updateLead
+      selectedLead.value = updatedLead;
+    }
     
-    // Atualizar a lista de leads
+    // Atualizar a lista de leads no store
     const leadIndex = leadsStore.leads.findIndex(l => l.id === updatedLead.id);
     if (leadIndex !== -1) {
-      leadsStore.leads[leadIndex] = updatedLead;
+      leadsStore.leads[leadIndex] = selectedLead.value;
     }
   } catch (error) {
     console.error('Erro ao fazer upload do arquivo:', error);
@@ -452,11 +468,22 @@ const handleFileDelete = async (attachment) => {
       attachments: updatedLead.attachments
     });
     
-    // Atualizar localmente usando a cópia completa
-    selectedLead.value = updatedLead;
+    // Buscar os dados atualizados do lead para garantir sincronização
+    try {
+      const refreshedLead = await leadService.getLead(updatedLead.id!);
+      selectedLead.value = refreshedLead;
+    } catch (refreshError) {
+      console.error('Erro ao atualizar dados do lead após exclusão de arquivo:', refreshError);
+    }
+    
+    // Atualizar a lista de leads no store
+    const leadIndex = leadsStore.leads.findIndex(l => l.id === updatedLead.id);
+    if (leadIndex !== -1) {
+      leadsStore.leads[leadIndex] = selectedLead.value;
+    }
   } catch (error) {
     console.error('Erro ao excluir arquivo:', error);
-    alert('Erro ao excluir o arquivo');
+    alert('Erro ao excluir arquivo. Tente novamente.');
   }
 };
 
@@ -544,9 +571,28 @@ const deleteObservation = async (observationId: string) => {
   }
 };
 
+// Inicializar realtors e partners selecionados com base no usuário atual
+const initializeSelectedUsers = () => {
+  console.log('[Leads] Inicializando usuários selecionados...');
+  
+  if (authStore.userRole === 'realtor') {
+    // Se for um realtor, seleciona a si mesmo
+    selectedRealtors.value = [authStore.user?.uid || ''];
+    console.log('[Leads] Realtor selecionado:', selectedRealtors.value);
+  } else if (authStore.userRole === 'partner') {
+    // Se for um parceiro, seleciona a si mesmo
+    selectedPartners.value = [authStore.user?.uid || ''];
+    console.log('[Leads] Partner selecionado:', selectedPartners.value);
+  }
+};
+
 // Carregar leads quando o usuário estiver autenticado
 onMounted(async () => {
+  isLoading.value = true;
   try {
+    // Inicializar usuários selecionados
+    initializeSelectedUsers();
+    
     // Carregar usuários
     if (authStore.userRole === 'realtor' || authStore.userRole === 'broker') {
       await userManagementStore.fetchUsers();
@@ -585,6 +631,9 @@ watch(() => authStore.user, async (user) => {
   }
 
   try {
+    // Inicializar usuários selecionados
+    initializeSelectedUsers();
+    
     // Carregar usuários
     if (authStore.userRole === 'realtor' || authStore.userRole === 'broker') {
       await userManagementStore.fetchUsers();
@@ -775,7 +824,7 @@ const openFilesModal = (lead) => {
               class="ml-3 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#012928] hover:bg-[#023a39] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#01FBA1]"
             >
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
               </svg>
               Novo Lead
             </button>
@@ -837,7 +886,7 @@ const openFilesModal = (lead) => {
               >
                 <option value="all">Todos</option>
                 <option v-for="realtor in availableRealtors" :key="realtor.id" :value="realtor.id">
-                  {{ realtor.name }}
+                  {{ realtor.displayName }}
                 </option>
               </select>
             </div>
@@ -986,7 +1035,7 @@ const openFilesModal = (lead) => {
                     class="text-gray-600 hover:text-gray-900 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#01FBA1] rounded-md p-1"
                   >
                     <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586a1 1 0 01.293.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h10m-10 4h10M3 5a2 2 0 012-2h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5z" />
                     </svg>
                   </button>
                   <button
@@ -994,28 +1043,29 @@ const openFilesModal = (lead) => {
                     class="text-gray-600 hover:text-gray-900 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#01FBA1] rounded-md p-1"
                   >
                     <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L9 10.586 7.707 9.293a1 1 0 00-1.414-1.414l2 2a1 1 0 001.414 0l4-4z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                     </svg>
                   </button>
                   <!-- Botão de Reativar (apenas para leads arquivados) -->
                   <button
                     v-if="lead.archived"
                     @click="handleReactivateClick(lead)"
-                    class="text-green-600 hover:text-green-900 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#01FBA1] rounded-md p-1"
+                    class="text-green-600 hover:text-green-900 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#01FBA1] focus:ring-offset-2"
                     title="Reativar Lead"
                   >
                     <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
                     </svg>
                   </button>
                   <!-- Botão de Arquivar (apenas para leads não arquivados) -->
                   <button
                     v-if="!lead.archived"
                     @click="handleArchiveClick(lead)"
-                    class="text-gray-600 hover:text-gray-900 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#01FBA1] rounded-md p-1"
+                    class="text-amber-600 hover:text-amber-900 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#01FBA1] rounded-md p-1"
+                    title="Arquivar Lead"
                   >
                     <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4 2 2 0 010 4zM5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                     </svg>
                   </button>
                   <button
@@ -1062,12 +1112,12 @@ const openFilesModal = (lead) => {
         <template #content>
           <div class="space-y-6">
             <LeadForm
-              :lead="isEditMode ? editingLead : newLead"
+              :lead="isEditMode ? editingLead : {}"
               :is-edit="isEditMode"
               @submit="handleLeadSubmit"
               @cancel="showModal = false"
-              @update:partners="partners => selectedPartners = partners"
-              @update:realtors="realtors => selectedRealtors = realtors"
+              @update:partners="selectedPartners = $event"
+              @update:realtors="selectedRealtors = $event"
             />
           </div>
         </template>
@@ -1222,22 +1272,24 @@ const openFilesModal = (lead) => {
                     </div>
                   </div>
                   <div class="flex items-center space-x-1 ml-3">
+                    <!-- Botão de editar -->
                     <button
                       @click="startEditingObservation(note.id, note.text)"
                       class="text-gray-400 hover:text-gray-500 p-1 rounded hover:bg-gray-100"
                       title="Editar observação"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                       </svg>
                     </button>
+                    <!-- Botão de excluir -->
                     <button
                       @click="deleteObservation(note.id)"
                       class="text-red-400 hover:text-red-500 p-1 rounded hover:bg-red-50"
                       title="Excluir observação"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
-                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0111 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
                     </button>
                   </div>
@@ -1253,13 +1305,13 @@ const openFilesModal = (lead) => {
                   <div class="flex justify-end space-x-2">
                     <button
                       @click="cancelEditingObservation"
-                      class="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#012928]"
+                      class="inline-flex items-center rounded-md border border-gray-300 bg-white py-1.5 sm:py-2 px-3 sm:px-4 text-sm font-medium text-[#012928] shadow-sm hover:border-[#01FBA1] focus:outline-none focus:ring-2 focus:ring-[#01FBA1] focus:ring-offset-2"
                     >
                       Cancelar
                     </button>
                     <button
                       @click="saveObservation(note.id)"
-                      class="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-[#012928] hover:bg-[#012928]/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#012928]"
+                      class="inline-flex items-center rounded-md border border-transparent text-sm font-medium text-white bg-[#012928] shadow-sm hover:bg-[#012928]/90 focus:outline-none focus:ring-2 focus:ring-[#012928] focus:ring-offset-2"
                     >
                       Salvar
                     </button>
@@ -1300,7 +1352,7 @@ const openFilesModal = (lead) => {
                 </p>
               </div>
 
-              <div v-if="selectedLead.attachments?.length" class="mt-3">
+              <div v-if="selectedLead?.attachments && selectedLead.attachments.length > 0" class="mt-3">
                 <div class="flex items-center justify-between mb-1.5">
                   <h3 class="text-xs font-medium text-gray-700">
                     Arquivos Anexados
@@ -1334,7 +1386,7 @@ const openFilesModal = (lead) => {
                         title="Visualizar arquivo"
                       >
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                         </svg>
                       </a>
                       <!-- Botão de excluir -->
@@ -1402,7 +1454,7 @@ const openFilesModal = (lead) => {
                   title="Baixar arquivo"
                 >
                   <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                   </svg>
                 </a>
                 <!-- Botão de excluir -->
@@ -1424,8 +1476,8 @@ const openFilesModal = (lead) => {
       <ConfirmationModal
         :show="showDeleteConfirmation"
         title="Excluir Lead"
-        message="Tem certeza que deseja excluir este lead? Esta ação não pode ser desfeita."
-        confirm-text="Excluir"
+        message="Tem certeza que deseja excluir este lead? Esta ação não pode ser desfeita e todos os dados associados serão permanentemente removidos do sistema."
+        confirm-text="Excluir Lead"
         cancel-text="Cancelar"
         type="danger"
         @confirm="confirmDelete"
@@ -1435,8 +1487,8 @@ const openFilesModal = (lead) => {
       <ConfirmationModal
         :show="showArchiveConfirmation"
         title="Arquivar Lead"
-        message="Tem certeza que deseja arquivar este lead? Você poderá reativá-lo posteriormente."
-        confirm-text="Arquivar"
+        message="Tem certeza que deseja arquivar este lead? Leads arquivados não aparecerão na lista principal, mas todos os seus dados serão preservados e você poderá reativá-lo a qualquer momento."
+        confirm-text="Arquivar Lead"
         cancel-text="Cancelar"
         type="warning"
         @confirm="confirmArchive"
@@ -1446,10 +1498,10 @@ const openFilesModal = (lead) => {
       <ConfirmationModal
         :show="showReactivateConfirmation"
         title="Reativar Lead"
-        message="Tem certeza que deseja reativar este lead? Ele voltará a aparecer na lista principal."
-        confirm-text="Reativar"
+        message="Tem certeza que deseja reativar este lead? Ele voltará a aparecer na lista principal e todas as suas informações serão restauradas ao estado anterior ao arquivamento."
+        confirm-text="Reativar Lead"
         cancel-text="Cancelar"
-        type="info"
+        type="success"
         @confirm="confirmReactivate"
         @cancel="showReactivateConfirmation = false"
       />

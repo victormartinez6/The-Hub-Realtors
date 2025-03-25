@@ -10,7 +10,7 @@
         leave-from="opacity-100"
         leave-to="opacity-0"
       >
-        <div class="fixed inset-0 bg-black bg-opacity-25" />
+        <div class="fixed inset-0 bg-gray-50 bg-opacity-75 backdrop-blur-[8px]" />
       </TransitionChild>
 
       <div class="fixed inset-0 overflow-y-auto">
@@ -24,7 +24,7 @@
             leave-from="opacity-100 scale-100"
             leave-to="opacity-0 scale-95"
           >
-            <DialogPanel class="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-white text-left align-middle shadow-xl transition-all">
+            <DialogPanel class="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-white text-left align-middle shadow-lg transition-all border border-gray-100 ring-1 ring-black ring-opacity-5">
               <DialogTitle as="h3" class="text-xl font-medium leading-6 text-[#012928] border-b border-gray-200 p-6">
                 <slot name="title"></slot>
               </DialogTitle>
@@ -34,7 +34,7 @@
               </div>
 
               <!-- Modal footer -->
-              <div class="bg-gray-50 px-6 py-4 border-t border-gray-200">
+              <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 rounded-b-2xl">
                 <slot name="footer"></slot>
               </div>
             </DialogPanel>

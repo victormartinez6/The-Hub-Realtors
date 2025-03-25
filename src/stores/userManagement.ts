@@ -8,7 +8,6 @@ import {
   updateDoc,
   query,
   where,
-  orderBy,
   serverTimestamp,
   deleteDoc
 } from 'firebase/firestore';
@@ -16,7 +15,6 @@ import {
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
   updateProfile,
-  deleteUser,
   signOut
 } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
@@ -32,9 +30,17 @@ interface User {
   brokerId?: string;
   brokerName?: string;
   photoURL?: string;
+  profilePicture?: string;
   lastLogin?: Date;
   createdAt: Date;
   updatedAt: Date;
+  // Campos adicionais
+  countryCode?: string;
+  streetAddress?: string;
+  unit?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
 }
 
 export const useUserManagementStore = defineStore('userManagement', {
@@ -44,8 +50,10 @@ export const useUserManagementStore = defineStore('userManagement', {
     usersByBroker: [] as User[],
     usersByRole: {
       realtor: [] as User[],
-      partner: [] as User[]
+      partner: [] as User[],
+      broker: [] as User[]
     },
+    partners: [] as User[], // adicionado partners como um estado
     loading: false,
     error: null as string | null
   }),
@@ -64,31 +72,65 @@ export const useUserManagementStore = defineStore('userManagement', {
 
   actions: {
     async fetchUsers() {
+      // Se já estiver carregando, não inicia outra requisição
+      if (this.loading) {
+        logger.debug('UserManagement: Já existe um carregamento de usuários em andamento');
+        return;
+      }
+      
       this.loading = true;
       this.error = null;
       try {
         const usersCollection = collection(db, 'users');
         const querySnapshot = await getDocs(usersCollection);
         
-        this.users = querySnapshot.docs
-          .map(doc => {
-            const data = doc.data();
-            return {
+        // Array temporário para armazenar usuários processados
+        const processedUsers: User[] = [];
+        
+        // Processa cada documento
+        querySnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          // Verifica se o usuário tem um papel válido
+          if (['broker', 'realtor', 'partner'].includes(data.role)) {
+            // Cria um objeto User com valores padrão para campos obrigatórios
+            const user: User = {
               id: doc.id,
-              ...data,
-              createdAt: data.createdAt?.toDate?.() || null,
-              updatedAt: data.updatedAt?.toDate?.() || null,
-              lastLogin: data.lastLogin?.toDate?.() || null
+              email: data.email || '',
+              displayName: data.displayName || '',
+              role: (data.role as 'broker' | 'realtor' | 'partner') || 'partner',
+              status: (data.status as 'active' | 'inactive' | 'blocked') || 'active',
+              photoURL: data.photoURL || undefined,
+              profilePicture: data.profilePicture || undefined,
+              phone: data.phone || undefined,
+              brokerId: data.brokerId || undefined,
+              brokerName: data.brokerName || undefined,
+              lastLogin: data.lastLogin?.toDate?.() || undefined,
+              createdAt: data.createdAt?.toDate?.() || new Date(),
+              updatedAt: data.updatedAt?.toDate?.() || new Date()
             };
-          })
-          .filter(user => ['broker', 'realtor', 'partner'].includes(user.role))
-          .sort((a, b) => {
-            const dateA = a.createdAt?.getTime() || 0;
-            const dateB = b.createdAt?.getTime() || 0;
-            return dateB - dateA;
-          }) as User[];
-
+            processedUsers.push(user);
+          }
+        });
+        
+        // Ordena os usuários por data de criação (mais recentes primeiro)
+        processedUsers.sort((a, b) => {
+          const dateA = a.createdAt?.getTime() || 0;
+          const dateB = b.createdAt?.getTime() || 0;
+          return dateB - dateA;
+        });
+        
+        // Atribui ao estado
+        this.users = processedUsers;
+        
         logger.debug(`UserManagement: Usuários carregados: ${this.users.length}`);
+        
+        // Verificamos se todos os usuários têm as propriedades necessárias
+        this.users.forEach(user => {
+          if (!user.displayName) {
+            logger.warn(`UserManagement: Usuário ${user.id} não tem displayName`);
+          }
+          logger.debug(`UserManagement: Usuário ${user.id}, nome: ${user.displayName}, foto: ${user.photoURL || user.profilePicture || 'sem foto'}`);
+        });
       } catch (err) {
         logger.error('UserManagement: Erro ao buscar usuários:', err);
         this.error = 'Erro ao carregar usuários';
@@ -98,21 +140,48 @@ export const useUserManagementStore = defineStore('userManagement', {
     },
 
     async fetchBrokers() {
+      this.loading = true;
+      this.error = null;
       try {
+        logger.debug('UserManagement: Buscando brokers');
         const usersCollection = collection(db, 'users');
         const q = query(
           usersCollection,
           where('role', '==', 'broker'),
           where('status', '==', 'active')
         );
-        
         const querySnapshot = await getDocs(q);
-        this.brokers = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as User[];
-      } catch (err) {
-        logger.error('UserManagement: Erro ao buscar brokers:', err);
+        
+        // Array temporário para armazenar brokers processados
+        const brokers: User[] = [];
+        
+        // Processa cada documento
+        querySnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          // Cria um objeto User com valores padrão para campos obrigatórios
+          const user: User = {
+            id: doc.id,
+            email: data.email || '',
+            displayName: data.displayName || '',
+            role: 'broker',
+            status: 'active',
+            photoURL: data.photoURL || undefined,
+            profilePicture: data.profilePicture || undefined,
+            phone: data.phone || undefined,
+            lastLogin: data.lastLogin?.toDate?.() || undefined,
+            createdAt: data.createdAt?.toDate?.() || new Date(),
+            updatedAt: data.updatedAt?.toDate?.() || new Date()
+          };
+          brokers.push(user);
+        });
+        
+        this.usersByRole.broker = brokers;
+        logger.debug(`UserManagement: ${brokers.length} brokers encontrados`);
+      } catch (error) {
+        logger.error('UserManagement: Erro ao buscar brokers:', error);
+        this.error = 'Erro ao carregar brokers';
+      } finally {
+        this.loading = false;
       }
     },
 
@@ -165,7 +234,13 @@ export const useUserManagementStore = defineStore('userManagement', {
         await sendPasswordResetEmail(auth, userData.email);
 
         // 6. Atualizar o estado local
-        this.users.push(userDataToSave as User);
+        const userWithDates: User = {
+          ...userDataToSave,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        } as User;
+        
+        this.users.push(userWithDates);
         
         return userDataToSave;
       } catch (error: any) {
@@ -291,6 +366,54 @@ export const useUserManagementStore = defineStore('userManagement', {
       }
     },
 
+    async fetchRealtors() {
+      this.loading = true;
+      this.error = null;
+      try {
+        logger.debug('UserManagement: Buscando realtors');
+        const usersCollection = collection(db, 'users');
+        const q = query(
+          usersCollection,
+          where('role', '==', 'realtor'),
+          where('status', '==', 'active')
+        );
+        const querySnapshot = await getDocs(q);
+        
+        // Array temporário para armazenar realtors processados
+        const realtors: User[] = [];
+        
+        // Processa cada documento
+        querySnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          // Cria um objeto User com valores padrão para campos obrigatórios
+          const user: User = {
+            id: doc.id,
+            email: data.email || '',
+            displayName: data.displayName || '',
+            role: 'realtor',
+            status: 'active',
+            photoURL: data.photoURL || undefined,
+            profilePicture: data.profilePicture || undefined,
+            phone: data.phone || undefined,
+            brokerId: data.brokerId || undefined,
+            brokerName: data.brokerName || undefined,
+            lastLogin: data.lastLogin?.toDate?.() || undefined,
+            createdAt: data.createdAt?.toDate?.() || new Date(),
+            updatedAt: data.updatedAt?.toDate?.() || new Date()
+          };
+          realtors.push(user);
+        });
+        
+        this.usersByRole.realtor = realtors;
+        logger.debug(`UserManagement: ${realtors.length} realtors encontrados`);
+      } catch (error) {
+        logger.error('UserManagement: Erro ao buscar realtors:', error);
+        this.error = 'Erro ao carregar realtors';
+      } finally {
+        this.loading = false;
+      }
+    },
+
     async fetchBrokerRealtors(brokerId: string) {
       logger.debug(`UserManagement: Buscando realtors do broker ${brokerId}`);
       try {
@@ -300,12 +423,30 @@ export const useUserManagementStore = defineStore('userManagement', {
           where('brokerId', '==', brokerId)
         ));
 
-        const realtors = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate?.() || null,
-          updatedAt: doc.data().updatedAt?.toDate?.() || null
-        }));
+        // Array temporário para armazenar realtors processados
+        const realtors: User[] = [];
+        
+        // Processa cada documento
+        querySnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          // Cria um objeto User com valores padrão para campos obrigatórios
+          const user: User = {
+            id: doc.id,
+            email: data.email || '',
+            displayName: data.displayName || '',
+            role: 'realtor',
+            status: (data.status as 'active' | 'inactive' | 'blocked') || 'active',
+            photoURL: data.photoURL || undefined,
+            profilePicture: data.profilePicture || undefined,
+            phone: data.phone || undefined,
+            brokerId: data.brokerId || undefined,
+            brokerName: data.brokerName || undefined,
+            lastLogin: data.lastLogin?.toDate?.() || undefined,
+            createdAt: data.createdAt?.toDate?.() || new Date(),
+            updatedAt: data.updatedAt?.toDate?.() || new Date()
+          };
+          realtors.push(user);
+        });
 
         this.usersByBroker = realtors;
         logger.debug(`UserManagement: ${realtors.length} realtors encontrados`);
@@ -326,21 +467,37 @@ export const useUserManagementStore = defineStore('userManagement', {
           where('role', '==', 'partner'),
           where('status', '==', 'active')
         );
-        
         const querySnapshot = await getDocs(q);
-        logger.debug('UserManagement: Parceiros encontrados:', querySnapshot.size);
         
-        this.usersByRole.partner = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate?.() || null,
-          updatedAt: doc.data().updatedAt?.toDate?.() || null,
-          lastLogin: doc.data().lastLogin?.toDate?.() || null
-        })) as User[];
-
-        logger.debug('UserManagement: Lista de parceiros atualizada:', this.usersByRole.partner);
-      } catch (err) {
-        logger.error('UserManagement: Erro ao buscar parceiros:', err);
+        // Array temporário para armazenar parceiros processados
+        const partners: User[] = [];
+        
+        // Processa cada documento
+        querySnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          // Cria um objeto User com valores padrão para campos obrigatórios
+          const user: User = {
+            id: doc.id,
+            email: data.email || '',
+            displayName: data.displayName || '',
+            role: 'partner',
+            status: 'active',
+            photoURL: data.photoURL || undefined,
+            profilePicture: data.profilePicture || undefined,
+            phone: data.phone || undefined,
+            brokerId: data.brokerId || undefined,
+            brokerName: data.brokerName || undefined,
+            lastLogin: data.lastLogin?.toDate?.() || undefined,
+            createdAt: data.createdAt?.toDate?.() || new Date(),
+            updatedAt: data.updatedAt?.toDate?.() || new Date()
+          };
+          partners.push(user);
+        });
+        
+        this.partners = partners;
+        logger.debug(`UserManagement: ${partners.length} parceiros encontrados`);
+      } catch (error) {
+        logger.error('UserManagement: Erro ao buscar parceiros:', error);
         this.error = 'Erro ao carregar parceiros';
       } finally {
         this.loading = false;
@@ -415,6 +572,57 @@ export const useUserManagementStore = defineStore('userManagement', {
         this.error = `Erro ao carregar ${role}s`;
       } finally {
         this.loading = false;
+      }
+    },
+
+    async fetchUserById(userId: string): Promise<User | null> {
+      try {
+        logger.debug(`UserManagement: Buscando usuário pelo ID ${userId}`);
+        const userDoc = await getDoc(doc(db, 'users', userId));
+        
+        if (!userDoc.exists()) {
+          logger.warn(`UserManagement: Usuário com ID ${userId} não encontrado`);
+          return null;
+        }
+        
+        const data = userDoc.data();
+        
+        // Cria um objeto User com valores padrão para campos obrigatórios
+        const user: User = {
+          id: userDoc.id,
+          email: data.email || '',
+          displayName: data.displayName || '',
+          role: (data.role as 'broker' | 'realtor' | 'partner') || 'partner',
+          status: (data.status as 'active' | 'inactive' | 'blocked') || 'active',
+          photoURL: data.photoURL || undefined,
+          profilePicture: data.profilePicture || undefined,
+          phone: data.phone || undefined,
+          brokerId: data.brokerId || undefined,
+          brokerName: data.brokerName || undefined,
+          countryCode: data.countryCode || undefined,
+          streetAddress: data.streetAddress || undefined,
+          unit: data.unit || undefined,
+          city: data.city || undefined,
+          state: data.state || undefined,
+          zipCode: data.zipCode || undefined,
+          lastLogin: data.lastLogin?.toDate?.() || undefined,
+          createdAt: data.createdAt?.toDate?.() || new Date(),
+          updatedAt: data.updatedAt?.toDate?.() || new Date()
+        };
+        
+        // Adiciona o usuário à lista de usuários se ainda não estiver lá
+        const existingUserIndex = this.users.findIndex(u => u.id === userId);
+        if (existingUserIndex >= 0) {
+          this.users[existingUserIndex] = user;
+        } else {
+          this.users.push(user);
+        }
+        
+        logger.debug(`UserManagement: Usuário ${userId} encontrado: ${user.displayName}`);
+        return user;
+      } catch (error) {
+        logger.error(`UserManagement: Erro ao buscar usuário ${userId}:`, error);
+        return null;
       }
     },
   }
