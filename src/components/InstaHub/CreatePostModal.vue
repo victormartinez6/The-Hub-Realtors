@@ -15,7 +15,7 @@
         >
           <div class="bg-white p-8 rounded-xl shadow-xl flex flex-col items-center">
             <img src="@/assets/images/favicon.svg" alt="Loading" class="h-24 w-24 animate-spin mb-6" />
-            <p class="text-xl font-medium text-[#012928]">{{ $t('instahub.publishing') }}...</p>
+            <p class="text-xl font-medium text-[#012928]">Publishing...</p>
           </div>
         </div>
         
@@ -27,7 +27,7 @@
               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-[#012928]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
-              {{ $t('instahub.createPost') }}
+              Create Post
             </h2>
             <button 
               @click="$emit('update:modelValue', false)" 
@@ -49,7 +49,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#012928]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                 </svg>
-                Categoria
+                Category
               </label>
               <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 <button 
@@ -91,9 +91,9 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#012928]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                Foto de Capa (Destaque)
+                Cover Photo (Featured)
               </label>
-              <p class="text-sm text-gray-600">Esta será a primeira foto exibida no post e usada como destaque no Top Properties</p>
+              <p class="text-sm text-gray-600">This will be the first photo displayed in the post and used as a featured image in Top Properties</p>
               
               <!-- Área de upload da capa -->
               <div class="relative">
@@ -106,8 +106,8 @@
                   <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-[#012928]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                   </svg>
-                  <p class="mt-2 text-sm text-gray-600">Clique para selecionar a foto de capa</p>
-                  <p class="mt-1 text-xs text-gray-500">PNG, JPG, GIF (máximo 10MB)</p>
+                  <p class="mt-2 text-sm text-gray-600">Click to select cover photo</p>
+                  <p class="mt-1 text-xs text-gray-500">PNG, JPG, GIF (max 10MB)</p>
                 </div>
                 
                 <!-- Input de arquivo oculto para a capa -->
@@ -136,7 +136,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
-                        Trocar foto
+                        Change photo
                       </button>
                       <button 
                         type="button"
@@ -146,7 +146,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
-                        Remover
+                        Remove
                       </button>
                     </div>
                   </div>
@@ -160,7 +160,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#012928]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                Fotos e Vídeos Adicionais
+                Additional Photos and Videos
               </label>
               
               <!-- Área de upload -->
@@ -174,8 +174,8 @@
                   <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                   </svg>
-                  <p class="mt-2 text-sm text-gray-600">{{ $t('instahub.clickToSelectMedia') }}</p>
-                  <p class="mt-1 text-xs text-gray-500">{{ $t('instahub.mediaFormats') }}</p>
+                  <p class="mt-2 text-sm text-gray-600">Click to select media</p>
+                  <p class="mt-1 text-xs text-gray-500">PNG, JPG, GIF, MP4 (max 50MB)</p>
                 </div>
                 
                 <!-- Input de arquivo oculto -->
@@ -272,7 +272,7 @@
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                       </svg>
-                      Adicionar mais
+                      Add more
                     </button>
                     <button 
                       type="button"
@@ -282,7 +282,7 @@
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
-                      {{ $t('instahub.removeMedia') }}
+                      Remove
                     </button>
                     <button 
                       type="button"
@@ -292,7 +292,7 @@
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      {{ $t('instahub.clearAllMedia') }}
+                      Clear all
                     </button>
                   </div>
                 </div>
@@ -305,14 +305,14 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#012928]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                 </svg>
-                {{ $t('instahub.caption') }}
+                Caption
               </label>
               <div class="relative">
                 <textarea 
                   v-model="caption" 
                   rows="3" 
                   class="block w-full rounded-md border border-gray-300 shadow-sm focus:border-[#012928] focus:ring focus:ring-[#012928] focus:ring-opacity-50"
-                  :placeholder="$t('instahub.writeCaption')"
+                  placeholder="Write a caption..."
                 ></textarea>
                 <button 
                   type="button"
@@ -347,7 +347,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#012928]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-2 2h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                 </svg>
-                Informações do Imóvel
+                Property Information
               </h3>
               
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -357,7 +357,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[#012928]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    Valor do Imóvel (USD)
+                    Property Price (USD)
                   </label>
                   <div class="relative">
                     <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -380,7 +380,7 @@
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    Endereço do Imóvel
+                    Property Address
                   </label>
                   <GooglePlacesAutocomplete
                     v-model="propertyAddress"
@@ -396,13 +396,13 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[#012928]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                     </svg>
-                    Tipo de Propriedade
+                    Property Type
                   </label>
                   <select 
                     v-model="propertyType" 
                     class="block w-full rounded-md border border-gray-300 shadow-sm focus:border-[#012928] focus:ring focus:ring-[#012928] focus:ring-opacity-50 bg-white"
                   >
-                    <option value="">Selecione o tipo</option>
+                    <option value="">Select type</option>
                     <option v-for="type in propertyTypes" :key="type" :value="type">{{ type }}</option>
                   </select>
                 </div>
@@ -413,7 +413,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[#012928]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    Status do Imóvel
+                    Property Status
                   </label>
                   <div class="flex flex-wrap gap-2">
                     <label v-for="status in propertyStatuses" :key="status" class="inline-flex items-center bg-gray-100 px-2 py-1 rounded-md hover:bg-gray-200 transition-colors">
@@ -434,13 +434,13 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[#012928]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    Tempo no Mercado
+                    Time on Market
                   </label>
                   <input 
                     type="text" 
                     v-model="timeOnMarket" 
                     class="block w-full rounded-md border border-gray-300 shadow-sm focus:border-[#012928] focus:ring focus:ring-[#012928] focus:ring-opacity-50 bg-white"
-                    placeholder="Ex: 30 dias"
+                    placeholder="Ex: 30 days"
                   />
                 </div>
 
@@ -448,7 +448,7 @@
                 <div class="space-y-2">
                   <label class="block text-sm font-medium text-gray-700 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[#012928]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v11a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                     </svg>
                     MLS ID
                   </label>
@@ -468,7 +468,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#012928]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
-                Características e Informações Financeiras
+                Property Features and Financial Information
               </h3>
               
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -478,7 +478,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[#012928]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    Porcentagem de Comissão
+                    Commission Percentage
                   </label>
                   <div class="relative">
                     <input 
@@ -502,7 +502,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[#012928]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2m-6 0h6" />
                     </svg>
-                    Taxa de HOA (USD)
+                    HOA Fees (USD)
                   </label>
                   <div class="relative">
                     <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -525,13 +525,13 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[#012928]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                     </svg>
-                    Características do Imóvel
+                    Property Features
                   </label>
                   
                   <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <!-- Quartos -->
                     <div class="space-y-1">
-                      <label class="block text-xs font-medium text-gray-700">Quartos</label>
+                      <label class="block text-xs font-medium text-gray-700">Bedrooms</label>
                       <div class="flex items-center">
                         <button 
                           type="button" 
@@ -563,7 +563,7 @@
                     
                     <!-- Banheiros -->
                     <div class="space-y-1">
-                      <label class="block text-xs font-medium text-gray-700">Banheiros</label>
+                      <label class="block text-xs font-medium text-gray-700">Bathrooms</label>
                       <div class="flex items-center">
                         <button 
                           type="button" 
@@ -594,7 +594,7 @@
                     
                     <!-- Vagas de Garagem -->
                     <div class="space-y-1">
-                      <label class="block text-xs font-medium text-gray-700">Vagas de Garagem</label>
+                      <label class="block text-xs font-medium text-gray-700">Garage Spaces</label>
                       <div class="flex items-center">
                         <button 
                           type="button" 
@@ -626,7 +626,7 @@
                     
                     <!-- Área (SQFT) -->
                     <div class="space-y-1">
-                      <label class="block text-xs font-medium text-gray-700">Área (SQFT)</label>
+                      <label class="block text-xs font-medium text-gray-700">Square Footage (SQFT)</label>
                       <input 
                         type="text" 
                         v-model="squareFootage" 
@@ -638,23 +638,23 @@
                   
                   <!-- Recursos adicionais -->
                   <div class="pt-2">
-                    <label class="block text-xs font-medium text-gray-700 mb-2">Recursos Adicionais</label>
+                    <label class="block text-xs font-medium text-gray-700 mb-2">Additional Features</label>
                     <div class="flex flex-wrap gap-2">
                       <label class="inline-flex items-center bg-gray-100 px-2 py-1 rounded-md hover:bg-gray-200 transition-colors">
                         <input type="checkbox" v-model="hasPool" class="h-4 w-4 text-[#012928] focus:ring-[#012928] rounded" />
-                        <span class="ml-2 text-sm text-gray-700">Piscina</span>
+                        <span class="ml-2 text-sm text-gray-700">Pool</span>
                       </label>
                       <label class="inline-flex items-center bg-gray-100 px-2 py-1 rounded-md hover:bg-gray-200 transition-colors">
                         <input type="checkbox" v-model="hasGarden" class="h-4 w-4 text-[#012928] focus:ring-[#012928] rounded" />
-                        <span class="ml-2 text-sm text-gray-700">Jardim</span>
+                        <span class="ml-2 text-sm text-gray-700">Garden</span>
                       </label>
                       <label class="inline-flex items-center bg-gray-100 px-2 py-1 rounded-md hover:bg-gray-200 transition-colors">
                         <input type="checkbox" v-model="hasAirConditioning" class="h-4 w-4 text-[#012928] focus:ring-[#012928] rounded" />
-                        <span class="ml-2 text-sm text-gray-700">Ar Condicionado</span>
+                        <span class="ml-2 text-sm text-gray-700">Air Conditioning</span>
                       </label>
                       <label class="inline-flex items-center bg-gray-100 px-2 py-1 rounded-md hover:bg-gray-200 transition-colors">
                         <input type="checkbox" v-model="hasSecurity" class="h-4 w-4 text-[#012928] focus:ring-[#012928] rounded" />
-                        <span class="ml-2 text-sm text-gray-700">Segurança</span>
+                        <span class="ml-2 text-sm text-gray-700">Security</span>
                       </label>
                     </div>
                   </div>
@@ -668,13 +668,13 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[#012928]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
-                Observações
+                Observations
               </label>
               <textarea 
                 v-model="observations" 
                 rows="3" 
                 class="block w-full rounded-md border border-gray-300 shadow-sm focus:border-[#012928] focus:ring focus:ring-[#012928] focus:ring-opacity-50 bg-white"
-                placeholder="Informações adicionais sobre o imóvel..."
+                placeholder="Additional information about the property..."
               ></textarea>
             </div>
             
@@ -686,14 +686,14 @@
                 class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#012928]"
                 :disabled="isSubmitting"
               >
-                {{ $t('common.cancel') }}
+                Cancel
               </button>
               <button 
                 type="submit" 
                 :disabled="!isFormValid || isSubmitting"
                 class="px-4 py-2 text-sm font-medium text-white bg-[#012928] border border-transparent rounded-md shadow-sm hover:bg-[#012928]/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#012928] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                {{ $t('instahub.publish') }}
+                Publish
               </button>
             </div>
           </form>
@@ -712,13 +712,13 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-2">Post Realizado com Sucesso!</h3>
-            <p class="text-gray-600 mb-6">Seu post foi publicado e já está disponível no feed.</p>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">Post Created Successfully!</h3>
+            <p class="text-gray-600 mb-6">Your post has been created and is now available in the feed.</p>
             <button 
               @click="closeSuccessModal" 
               class="w-full px-4 py-2 bg-[#012928] text-white rounded-lg hover:bg-[#023e3d] transition-colors duration-200"
             >
-              Fechar
+              Close
             </button>
           </div>
         </div>
@@ -729,7 +729,6 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue';
-import { useI18n } from 'vue-i18n';
 import { onClickOutside } from '@vueuse/core';
 import { useInstaHubStore } from '@/stores/instaHubStore';
 import { useAuthStore } from '@/stores/auth';
@@ -756,7 +755,6 @@ defineProps({
 
 const emit = defineEmits(['update:modelValue', 'close']);
 
-const { t } = useI18n();
 const authStore = useAuthStore();
 const instaHubStore = useInstaHubStore();
 
@@ -830,21 +828,21 @@ const handleFileSelect = (event: Event) => {
   // Limitar a 5 arquivos
   const totalFiles = selectedFiles.value.length + files.length;
   if (totalFiles > 5) {
-    alert('Você pode adicionar no máximo 5 arquivos.');
+    alert('You can add up to 5 files.');
     return;
   }
   
   files.forEach((file) => {
     // Verificar se o arquivo é uma imagem ou vídeo
     if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
-      alert('Por favor, selecione apenas imagens ou vídeos.');
+      alert('Please select only images or videos.');
       return;
     }
     
     // Verificar o tamanho do arquivo (limite de 50MB)
     const maxSize = 50 * 1024 * 1024; // 50MB em bytes
     if (file.size > maxSize) {
-      alert(`O arquivo ${file.name} excede o limite de 50MB.`);
+      alert(`The file ${file.name} exceeds the 50MB limit.`);
       return;
     }
     
@@ -853,7 +851,7 @@ const handleFileSelect = (event: Event) => {
       const preview = e.target?.result as string;
       const isVideo = file.type.startsWith('video/');
       
-      console.log(`Processando arquivo: ${file.name}, tipo: ${file.type}, é vídeo: ${isVideo}`);
+      console.log(`Processing file: ${file.name}, type: ${file.type}, is video: ${isVideo}`);
       
       // Adicionar o arquivo à lista de arquivos selecionados
       selectedFiles.value.push({
@@ -872,7 +870,7 @@ const handleFileSelect = (event: Event) => {
     };
     
     reader.onerror = (error) => {
-      console.error('Erro ao ler arquivo:', error);
+      console.error('Error reading file:', error);
     };
     
     // Ler o arquivo como URL de dados
@@ -945,14 +943,14 @@ const handleCoverPhotoSelect = (event: Event) => {
   
   // Verificar se o arquivo é uma imagem
   if (!file.type.startsWith('image/')) {
-    alert('Por favor, selecione apenas imagens.');
+    alert('Please select only images.');
     return;
   }
   
   // Verificar o tamanho do arquivo (limite de 10MB)
   const maxSize = 10 * 1024 * 1024; // 10MB em bytes
   if (file.size > maxSize) {
-    alert(`O arquivo ${file.name} excede o limite de 10MB.`);
+    alert(`The file ${file.name} exceeds the 10MB limit.`);
     return;
   }
   
@@ -960,7 +958,7 @@ const handleCoverPhotoSelect = (event: Event) => {
   reader.onload = (e) => {
     const preview = e.target?.result as string;
     
-    console.log(`Processando arquivo: ${file.name}, tipo: ${file.type}`);
+    console.log(`Processing file: ${file.name}, type: ${file.type}`);
     
     // Adicionar o arquivo à lista de arquivos selecionados
     coverPhoto.value = {
@@ -973,7 +971,7 @@ const handleCoverPhotoSelect = (event: Event) => {
   };
   
   reader.onerror = (error) => {
-    console.error('Erro ao ler arquivo:', error);
+    console.error('Error reading file:', error);
   };
   
   // Ler o arquivo como URL de dados
@@ -1042,7 +1040,7 @@ const handleSubmit = async () => {
   try {
     // Verificar se há foto de capa
     if (!coverPhoto.value) {
-      alert('Por favor, selecione uma foto de capa para o post.');
+      alert('Please select a cover photo for the post.');
       return;
     }
     
@@ -1068,10 +1066,10 @@ const handleSubmit = async () => {
     // Iniciar o processo de submissão
     isSubmitting.value = true;
     
-    console.log('Enviando post com categoria:', postCategory.value);
-    console.log('Foto de capa:', coverPhoto.value.fileName);
-    console.log('Total de arquivos de mídia:', mediaFilesToUpload.length);
-    console.log('Tipos de mídia:', mediaFilesToUpload.map(m => m.type).join(', '));
+    console.log('Sending post with category:', postCategory.value);
+    console.log('Cover photo:', coverPhoto.value.fileName);
+    console.log('Total media files:', mediaFilesToUpload.length);
+    console.log('Media types:', mediaFilesToUpload.map(m => m.type).join(', '));
     
     // Upload das mídias e criação do post usando a store
     await instaHubStore.createPost(
@@ -1107,8 +1105,8 @@ const handleSubmit = async () => {
         } : null
       },
       {
-        name: authStore.user?.displayName || 'Usuário',
-        role: authStore.userRole || 'Corretor de Imóveis'
+        name: authStore.user?.displayName || 'User',
+        role: authStore.userRole || 'Real Estate Agent'
       }
     );
     
@@ -1119,8 +1117,8 @@ const handleSubmit = async () => {
     // Resetar o formulário
     resetForm();
   } catch (error) {
-    console.error('Erro ao criar post:', error);
-    alert(`Erro ao criar o post: ${error instanceof Error ? error.message : 'Tente novamente mais tarde.'}`);
+    console.error('Error creating post:', error);
+    alert(`Error creating the post: ${error instanceof Error ? error.message : 'Try again later.'}`);
   } finally {
     isSubmitting.value = false;
   }
