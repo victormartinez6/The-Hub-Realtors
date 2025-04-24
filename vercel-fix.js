@@ -1,11 +1,16 @@
 // Este script será executado antes do build na Vercel
 // Ele cria um módulo vue-i18n vazio para evitar erros de build
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Obter o diretório atual
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Caminho para o diretório node_modules
-const nodeModulesDir = path.join(process.cwd(), 'node_modules');
+const nodeModulesDir = path.join(__dirname, 'node_modules');
 
 // Caminho para o diretório vue-i18n
 const vueI18nDir = path.join(nodeModulesDir, 'vue-i18n');
