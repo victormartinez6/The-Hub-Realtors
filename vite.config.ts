@@ -14,6 +14,17 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src')
     }
   },
+  build: {
+    rollupOptions: {
+      // Certifique-se de que vue-i18n seja tratado corretamente
+      external: [],
+      output: {
+        manualChunks: {
+          'vue-i18n': ['vue-i18n']
+        }
+      }
+    }
+  },
   server: {
     proxy: {
       '/api': {
