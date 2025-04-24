@@ -134,7 +134,7 @@
                         class="px-2 py-1 text-xs text-[#012928] bg-gray-100 rounded hover:bg-gray-200 transition-colors duration-200 flex items-center gap-1"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
                         Change photo
                       </button>
@@ -729,7 +729,6 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue';
-import { onClickOutside } from '@vueuse/core';
 import { useInstaHubStore } from '@/stores/instaHubStore';
 import { useAuthStore } from '@/stores/auth';
 import GooglePlacesAutocomplete from '@/components/common/GooglePlacesAutocomplete.vue';
@@ -1158,13 +1157,20 @@ const handlePlaceSelected = (place: any) => {
   propertyAddress.value = place.formatted_address;
 };
 
-// Detectar clique fora do seletor de emojis para fechá-lo
-onClickOutside(emojiPickerRef, () => {
-  showEmojiPicker.value = false;
+// Função para detectar clique fora do modal
+function handleClickOutside(event: MouseEvent) {
+  const modalContent = document.querySelector('.modal-content');
+  if (modalContent && !modalContent.contains(event.target as Node)) {
+    emit('update:modelValue', false);
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('mousedown', handleClickOutside);
 });
 
-// Limpar o formulário quando o modal é fechado
 onBeforeUnmount(() => {
+  document.removeEventListener('mousedown', handleClickOutside);
   resetForm();
 });
 </script>
