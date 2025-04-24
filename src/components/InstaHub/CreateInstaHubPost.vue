@@ -10,7 +10,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
         </svg>
       </div>
-      <span class="text-[#01FBA1] font-medium">{{ t('instahub.createPost') }}</span>
+      <span class="text-[#01FBA1] font-medium">Criar Novo Post</span>
     </button>
     
     <!-- Modal de criação de post -->
@@ -23,11 +23,8 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useI18n } from 'vue-i18n';
 // Importação absoluta em vez de relativa
 import CreatePostModal from '@/components/InstaHub/CreatePostModal.vue';
-
-const { t } = useI18n();
 
 // Estado do modal
 const showModal = ref(false);
