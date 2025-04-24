@@ -16,14 +16,18 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      // Certifique-se de que vue-i18n seja tratado corretamente
-      external: [],
+      // Garantir que vue-i18n seja incluído no build
+      external: [''],
       output: {
         manualChunks: {
-          'vue-i18n': ['vue-i18n']
+          'vue-i18n': ['vue-i18n'],
+          'vue': ['vue', 'vue-router', 'pinia']
         }
       }
     }
+  },
+  optimizeDeps: {
+    include: ['vue-i18n']
   },
   server: {
     proxy: {
