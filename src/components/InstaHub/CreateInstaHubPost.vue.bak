@@ -1,0 +1,362 @@
+<template>
+  <div class="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 mb-8">
+    <!-- Cabeçalho do formulário -->
+    <div class="p-4 border-b border-gray-200">
+      <h2 class="text-lg font-semibold text-gray-800">Criar Publicação</h2>
+    </div>
+    
+    <!-- Formulário de criação de post -->
+    <div class="p-4">
+      <!-- Título -->
+      <div class="mb-4">
+        <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Título</label>
+        <input 
+          type="text" 
+          id="title" 
+          v-model="formData.title" 
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#01FBA1] focus:border-transparent"
+          placeholder="Título da publicação"
+        />
+      </div>
+      
+      <!-- Conteúdo -->
+      <div class="mb-4">
+        <label for="content" class="block text-sm font-medium text-gray-700 mb-1">Conteúdo</label>
+        <textarea 
+          id="content" 
+          v-model="formData.content" 
+          rows="3" 
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#01FBA1] focus:border-transparent"
+          placeholder="Descreva sua publicação..."
+        ></textarea>
+      </div>
+      
+      <!-- Categoria -->
+      <div class="mb-4">
+        <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+        <select 
+          id="category" 
+          v-model="formData.category" 
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#01FBA1] focus:border-transparent"
+        >
+          <option value="">Selecione uma categoria</option>
+          <option value="Imóveis à Venda">Imóveis à Venda</option>
+          <option value="Imóveis para Alugar">Imóveis para Alugar</option>
+          <option value="Lançamentos">Lançamentos</option>
+          <option value="Comercial">Comercial</option>
+          <option value="Eventos">Eventos</option>
+        </select>
+      </div>
+      
+      <!-- Informações do imóvel (expansível) -->
+      <div class="mb-4">
+        <button 
+          @click="showPropertyInfo = !showPropertyInfo" 
+          type="button" 
+          class="flex items-center justify-between w-full px-4 py-2 text-sm font-medium text-left text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-[#01FBA1] focus:ring-offset-2"
+        >
+          <span>Informações do Imóvel</span>
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            class="h-5 w-5 transition-transform duration-300" 
+            :class="showPropertyInfo ? 'rotate-180' : ''"
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        
+        <div v-if="showPropertyInfo" class="mt-4 p-4 bg-gray-50 rounded-md">
+          <!-- Localização -->
+          <div class="mb-4">
+            <label for="location" class="block text-sm font-medium text-gray-700 mb-1">Localização</label>
+            <input 
+              type="text" 
+              id="location" 
+              v-model="formData.propertyInfo.location" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#01FBA1] focus:border-transparent"
+              placeholder="Endereço do imóvel"
+            />
+          </div>
+          
+          <!-- Preço -->
+          <div class="mb-4">
+            <label for="price" class="block text-sm font-medium text-gray-700 mb-1">Preço (R$)</label>
+            <input 
+              type="number" 
+              id="price" 
+              v-model="formData.propertyInfo.price" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#01FBA1] focus:border-transparent"
+              placeholder="Valor do imóvel"
+            />
+          </div>
+          
+          <!-- Características -->
+          <div class="grid grid-cols-2 gap-4">
+            <div class="mb-4">
+              <label for="bedrooms" class="block text-sm font-medium text-gray-700 mb-1">Quartos</label>
+              <input 
+                type="number" 
+                id="bedrooms" 
+                v-model="formData.propertyInfo.features.bedrooms" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#01FBA1] focus:border-transparent"
+                placeholder="Número de quartos"
+              />
+            </div>
+            
+            <div class="mb-4">
+              <label for="bathrooms" class="block text-sm font-medium text-gray-700 mb-1">Banheiros</label>
+              <input 
+                type="number" 
+                id="bathrooms" 
+                v-model="formData.propertyInfo.features.bathrooms" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#01FBA1] focus:border-transparent"
+                placeholder="Número de banheiros"
+              />
+            </div>
+            
+            <div class="mb-4">
+              <label for="area" class="block text-sm font-medium text-gray-700 mb-1">Área (m²)</label>
+              <input 
+                type="number" 
+                id="area" 
+                v-model="formData.propertyInfo.features.area" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#01FBA1] focus:border-transparent"
+                placeholder="Área em m²"
+              />
+            </div>
+            
+            <div class="mb-4">
+              <label for="garage" class="block text-sm font-medium text-gray-700 mb-1">Vagas de Garagem</label>
+              <input 
+                type="number" 
+                id="garage" 
+                v-model="formData.propertyInfo.features.garage" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#01FBA1] focus:border-transparent"
+                placeholder="Número de vagas"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Upload de imagens -->
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Imagens</label>
+        <div 
+          class="border-2 border-dashed border-gray-300 rounded-md p-6 text-center hover:border-[#01FBA1] transition-colors duration-200 cursor-pointer"
+          @click="triggerFileInput"
+          @dragover.prevent
+          @drop.prevent="handleFileDrop"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <p class="mt-1 text-sm text-gray-500">
+            Arraste e solte imagens aqui, ou clique para selecionar
+          </p>
+          <p class="mt-1 text-xs text-gray-400">
+            Formatos aceitos: JPG, PNG, WEBP. Máximo: 5 imagens.
+          </p>
+          <input 
+            type="file" 
+            ref="fileInput" 
+            multiple 
+            accept="image/*" 
+            class="hidden" 
+            @change="handleFileSelect"
+          />
+        </div>
+        
+        <!-- Preview das imagens selecionadas -->
+        <div v-if="selectedFiles.length > 0" class="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <div v-for="(file, index) in selectedFiles" :key="index" class="relative">
+            <img :src="previewUrls[index]" alt="Preview" class="h-24 w-full object-cover rounded-md" />
+            <button 
+              @click.prevent="removeFile(index)" 
+              class="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 focus:outline-none"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Botões de ação -->
+      <div class="flex justify-end gap-2">
+        <button 
+          @click="resetForm" 
+          type="button" 
+          class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#01FBA1]"
+        >
+          Cancelar
+        </button>
+        <button 
+          @click="createPost" 
+          type="button" 
+          :disabled="isSubmitting || !isFormValid"
+          class="px-4 py-2 bg-[#01FBA1] text-[#012928] rounded-md hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#01FBA1] disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <span v-if="isSubmitting" class="flex items-center">
+            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-[#012928]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Publicando...
+          </span>
+          <span v-else>Publicar</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, reactive } from 'vue';
+import { useAuthStore } from '@/stores/auth';
+import { useInstaHubStore } from '@/stores/instaHubStore';
+
+// Stores
+const authStore = useAuthStore();
+const instaHubStore = useInstaHubStore();
+
+// Estado do formulário
+const showPropertyInfo = ref(false);
+const isSubmitting = ref(false);
+const fileInput = ref<HTMLInputElement | null>(null);
+const selectedFiles = ref<File[]>([]);
+const previewUrls = ref<string[]>([]);
+
+// Dados do formulário
+const formData = reactive({
+  title: '',
+  content: '',
+  category: '',
+  propertyInfo: {
+    location: '',
+    price: null as number | null,
+    features: {
+      bedrooms: null as number | null,
+      bathrooms: null as number | null,
+      area: null as number | null,
+      garage: null as number | null
+    }
+  }
+});
+
+// Validação do formulário
+const isFormValid = computed(() => {
+  return (
+    formData.title.trim() !== '' &&
+    formData.content.trim() !== '' &&
+    formData.category !== '' &&
+    selectedFiles.length > 0
+  );
+});
+
+// Funções para manipulação de arquivos
+function triggerFileInput() {
+  fileInput.value?.click();
+}
+
+function handleFileSelect(event: Event) {
+  const input = event.target as HTMLInputElement;
+  if (input.files) {
+    addFiles(Array.from(input.files));
+  }
+}
+
+function handleFileDrop(event: DragEvent) {
+  if (event.dataTransfer?.files) {
+    addFiles(Array.from(event.dataTransfer.files));
+  }
+}
+
+function addFiles(files: File[]) {
+  // Filtrar apenas arquivos de imagem
+  const imageFiles = files.filter(file => file.type.startsWith('image/'));
+  
+  // Limitar a 5 imagens no total
+  const newFiles = [...selectedFiles.value, ...imageFiles].slice(0, 5);
+  selectedFiles.value = newFiles;
+  
+  // Gerar URLs de preview
+  generatePreviews();
+}
+
+function removeFile(index: number) {
+  selectedFiles.value.splice(index, 1);
+  previewUrls.value.splice(index, 1);
+}
+
+function generatePreviews() {
+  previewUrls.value = [];
+  selectedFiles.value.forEach(file => {
+    const url = URL.createObjectURL(file);
+    previewUrls.value.push(url);
+  });
+}
+
+// Resetar formulário
+function resetForm() {
+  formData.title = '';
+  formData.content = '';
+  formData.category = '';
+  formData.propertyInfo.location = '';
+  formData.propertyInfo.price = null;
+  formData.propertyInfo.features.bedrooms = null;
+  formData.propertyInfo.features.bathrooms = null;
+  formData.propertyInfo.features.area = null;
+  formData.propertyInfo.features.garage = null;
+  selectedFiles.value = [];
+  previewUrls.value = [];
+  showPropertyInfo.value = false;
+}
+
+// Criar post
+async function createPost() {
+  if (!isFormValid.value || !authStore.user?.uid) return;
+  
+  isSubmitting.value = true;
+  
+  try {
+    // Preparar dados do autor
+    const authorData = {
+      id: authStore.user.uid,
+      name: authStore.user.displayName || 'Usuário',
+      photoURL: authStore.user.photoURL || '',
+      role: authStore.userData?.role || 'user'
+    };
+    
+    // Criar post
+    await instaHubStore.createPost({
+      title: formData.title,
+      content: formData.content,
+      category: formData.category,
+      propertyInfo: {
+        location: formData.propertyInfo.location,
+        price: formData.propertyInfo.price,
+        features: {
+          bedrooms: formData.propertyInfo.features.bedrooms,
+          bathrooms: formData.propertyInfo.features.bathrooms,
+          area: formData.propertyInfo.features.area,
+          garage: formData.propertyInfo.features.garage
+        }
+      },
+      author: authorData,
+      mediaFiles: selectedFiles.value
+    });
+    
+    // Resetar formulário após sucesso
+    resetForm();
+  } catch (error) {
+    console.error('Erro ao criar post:', error);
+  } finally {
+    isSubmitting.value = false;
+  }
+}
+</script>
