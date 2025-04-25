@@ -43,6 +43,7 @@ const getLocale = (): Locale => {
 // Criar instância do i18n
 export const i18n = createI18n({
   legacy: false, // Usar a API de Composição do Vue 3
+  globalInjection: true, // Injetar $t globalmente mesmo no modo não-legacy
   locale: getLocale(),
   fallbackLocale: 'pt', // Idioma de fallback
   messages: {
