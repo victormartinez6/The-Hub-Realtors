@@ -13,14 +13,14 @@
              class="w-10 h-10 rounded-full object-cover border-2 border-[#01FBA1] hover:border-4 transition-all duration-200">
         <div>
           <h3 class="font-semibold text-gray-800">{{ authStore.user?.displayName || 'WRA Real Estate' }}</h3>
-          <p class="text-xs text-gray-500">{{ $t(`roles.${authStore.userData?.role || 'user'}`) }}</p>
+          <p class="text-xs text-gray-500">{{ t(`roles.${authStore.userData?.role || 'user'}`) }}</p>
         </div>
       </div>
     </div>
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup lang="ts">import { useTranslation } from '@/composables/useTranslation';
 import { useAuthStore } from '@/stores/auth';
 import { useRouter } from 'vue-router';
 
@@ -57,4 +57,7 @@ function sanitizeUrl(url?: any): string {
   
   return url;
 }
+
+// Internacionalização
+const { t } = useTranslation();
 </script>

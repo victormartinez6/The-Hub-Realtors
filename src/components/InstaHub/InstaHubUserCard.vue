@@ -34,7 +34,7 @@
             >
             <div>
               <h3 class="text-xl font-bold text-gray-800">{{ user.name }}</h3>
-              <p class="text-sm text-gray-500">{{ $t(`roles.${user.role || 'user'}`) }}</p>
+              <p class="text-sm text-gray-500">{{ t(`roles.${user.role || 'user'}`) }}</p>
             </div>
           </div>
           
@@ -94,7 +94,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup lang="ts">import { useTranslation } from '@/composables/useTranslation';
 import { defineProps, defineEmits } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { useRouter } from 'vue-router';
@@ -170,4 +170,7 @@ function handleImageError(event: Event) {
     target.style.display = 'none';
   }
 }
+
+// Internacionalização
+const { t } = useTranslation();
 </script>

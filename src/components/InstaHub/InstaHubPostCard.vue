@@ -14,7 +14,7 @@
         >
         <div>
           <h3 class="font-semibold text-gray-800">{{ post.author.name }}</h3>
-          <p class="text-xs text-gray-500">{{ $t(`roles.${post.author.role || 'user'}`) }}</p>
+          <p class="text-xs text-gray-500">{{ t(`roles.${post.author.role || 'user'}`) }}</p>
         </div>
       </div>
       
@@ -624,7 +624,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup lang="ts">import { useTranslation } from '@/composables/useTranslation';
 import { defineProps, defineEmits } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { useInstaHubStore } from '@/stores/instaHubStore';
@@ -1053,6 +1053,9 @@ async function addComment() {
     console.error('Erro ao adicionar comentário:', error);
   }
 }
+
+// Internacionalização
+const { t } = useTranslation();
 </script>
 
 <style scoped>

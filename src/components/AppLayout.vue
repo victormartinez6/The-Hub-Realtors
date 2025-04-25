@@ -41,22 +41,35 @@
           </button>
           <img :src="logoNome" alt="The Hub Realtors" class="h-8 w-auto">
         </div>
+        
+        <!-- Seletor de Idiomas -->
+        <LanguageSelector />
       </header>
 
       <!-- Page Content -->
       <main class="flex-1 p-4">
+        <!-- Barra superior fixa para telas maiores -->
+        <div class="hidden lg:flex justify-between items-center mb-6 pb-4 border-b">
+          <h1 class="text-2xl font-semibold text-gray-800">{{ $route.meta.title || t('nav.dashboard') }}</h1>
+          <LanguageSelector />
+        </div>
+        
         <slot></slot>
       </main>
     </div>
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup lang="ts">import { useTranslation } from '@/composables/useTranslation';
 import { ref } from 'vue';
-import Navigation from '@/components/Navigation.vue';
-import logoNome from '@/assets/images/The Hub Realtors_nome.svg';
+import Navigation from '../components/Navigation.vue';
+import LanguageSelector from '../components/LanguageSelector.vue';
+import logoNome from '../assets/images/The Hub Realtors_nome.svg';
 
 const isSidebarOpen = ref(false);
+
+// Internacionalização
+const { t } = useTranslation();
 </script>
 
 <style scoped>
