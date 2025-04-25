@@ -19,7 +19,7 @@
         
         <!-- Mensagem de erro -->
         <div v-else-if="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-          <strong class="font-bold">{{ $t('instahub.error') }}</strong>
+          <strong class="font-bold">{{ t('instahub.error') }}</strong>
           <span class="block sm:inline"> {{ error }}</span>
         </div>
         
@@ -91,6 +91,7 @@
 import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useInstaHubStore } from '@/stores/instaHubStore';
+import { useI18n } from 'vue-i18n';
 
 // Componentes
 import InstaHubHeader from '@/components/InstaHub/InstaHubHeader.vue';
@@ -104,6 +105,7 @@ import TopPropertyCard from '@/components/InstaHub/TopPropertyCard.vue';
 // Store e composables
 const instaHubStore = useInstaHubStore();
 const route = useRoute();
+const { t } = useI18n();
 
 // Estado local
 const selectedPost = ref<any>(null);
