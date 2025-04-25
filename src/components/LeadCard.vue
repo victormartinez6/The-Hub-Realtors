@@ -41,42 +41,39 @@ const preloadUserData = async () => {
     props.lead.assignedPartners.forEach((id: string) => userIds.add(id));
   }
   
-  console.log(`Total de usuários a carregar: ${userIds.size}`);
+  // Filtra usuários que já sabemos que não existem
+  const filteredUserIds = Array.from(userIds).filter(id => !nonExistentUsers.value.has(id));
   
   // Carrega os dados de cada usuário
-  const promises = Array.from(userIds).map(async (userId) => {
+  const promises = filteredUserIds.map(async (userId) => {
     try {
       // Primeiro tenta buscar do store
       if (!userManagementStore.users.some(u => u.id === userId)) {
-        console.log(`Buscando dados do usuário ${userId} no Firestore`);
-        
         // Busca diretamente do Firestore para garantir dados atualizados
         const userDoc = await getDoc(doc(db, 'users', userId));
         
         if (userDoc.exists()) {
           const userData = userDoc.data();
-          console.log(`Dados do usuário ${userId} obtidos do Firestore:`, userData);
           
           // Pré-carrega a foto do usuário
           if (userData.photoURL) {
-            console.log(`Pré-carregando photoURL para ${userId}: ${userData.photoURL}`);
             Object.assign(userPhotoCache.value, { [userId]: userData.photoURL });
           } else if (userData.profilePicture) {
-            console.log(`Pré-carregando profilePicture para ${userId}: ${userData.profilePicture}`);
             Object.assign(userPhotoCache.value, { [userId]: userData.profilePicture });
           } else {
             // Se não tiver foto, deixa vazio para mostrar as iniciais
-            console.log(`Usuário ${userId} não tem foto de perfil`);
             Object.assign(userPhotoCache.value, { [userId]: '' });
           }
           
           // Pré-carrega o nome do usuário
           Object.assign(userNameCache.value, { [userId]: userData.displayName || 'Usuário' });
         } else {
-          console.error(`Usuário ${userId} não encontrado no Firestore`);
+          // Marca o usuário como inexistente para evitar consultas futuras
+          nonExistentUsers.value.add(userId);
+          Object.assign(userPhotoCache.value, { [userId]: '' });
+          Object.assign(userNameCache.value, { [userId]: 'Usuário não encontrado' });
         }
       } else {
-        console.log(`Usuário ${userId} já está carregado no store`);
         const user = userManagementStore.users.find(u => u.id === userId);
         if (user) {
           // Pré-carrega a foto do usuário
@@ -174,6 +171,8 @@ const hasNotes = computed(() => props.lead.notes && props.lead.notes.length > 0)
 
 // Cache para armazenar as URLs das fotos dos usuários
 const userPhotoCache = ref<Record<string, string>>({});
+// Cache para armazenar usuários não encontrados para evitar consultas repetidas
+const nonExistentUsers = ref<Set<string>>(new Set());
 
 // Função síncrona que retorna a URL da foto do usuário do cache ou inicia a busca assíncrona
 const getUserPhotoUrl = (userId: string): string => {
@@ -183,34 +182,29 @@ const getUserPhotoUrl = (userId: string): string => {
     return '';
   }
 
+  // Se o usuário já foi identificado como inexistente, retorna vazio imediatamente
+  if (nonExistentUsers.value.has(userId)) {
+    return '';
+  }
+
   // Se a URL já estiver no cache, retorna imediatamente
   if (userPhotoCache.value[userId]) {
-    console.log(`Usando URL do cache para ${userId}: ${userPhotoCache.value[userId]}`);
     return userPhotoCache.value[userId];
   }
   
   // Verifica se o usuário já está na lista
   const user = userManagementStore.users.find(u => u.id === userId);
   if (user) {
-    console.log(`Usuário encontrado na lista para ${userId}: ${user.displayName}`);
-    
     // Busca a foto do perfil do usuário
     if (user.photoURL) {
-      console.log(`Usando photoURL para ${userId}: ${user.photoURL}`);
       Object.assign(userPhotoCache.value, { [userId]: user.photoURL });
       return user.photoURL;
     } 
     else if (user.profilePicture) {
-      console.log(`Usando profilePicture para ${userId}: ${user.profilePicture}`);
       Object.assign(userPhotoCache.value, { [userId]: user.profilePicture });
       return user.profilePicture;
     }
-    
-    // Se não tiver foto, busca diretamente no Firestore
-    console.log(`Usuário ${userId} não tem foto no cache, buscando no Firestore...`);
   }
-  
-  console.log(`Usuário não encontrado na lista para ${userId}, buscando no Firestore...`);
   
   // URL vazia enquanto a busca assíncrona está em andamento
   const loadingUrl = '';
@@ -219,28 +213,24 @@ const getUserPhotoUrl = (userId: string): string => {
   getDoc(doc(db, 'users', userId)).then(userDoc => {
     if (userDoc.exists()) {
       const userData = userDoc.data();
-      console.log(`Dados do usuário ${userId} obtidos diretamente do Firestore:`, userData);
       
       let photoUrl = null;
       
       if (userData.photoURL) {
         photoUrl = userData.photoURL;
-        console.log(`Usando photoURL do Firestore para ${userId}: ${photoUrl}`);
       } else if (userData.profilePicture) {
         photoUrl = userData.profilePicture;
-        console.log(`Usando profilePicture do Firestore para ${userId}: ${photoUrl}`);
       }
       
       if (photoUrl) {
-        console.log(`Atualizando cache com foto do Firestore para ${userId}: ${photoUrl}`);
         Object.assign(userPhotoCache.value, { [userId]: photoUrl });
       } else {
         // Se não tiver foto, deixa vazio para mostrar as iniciais
-        console.log(`Usuário ${userId} não tem foto de perfil`);
         Object.assign(userPhotoCache.value, { [userId]: '' });
       }
     } else {
-      console.error(`Usuário ${userId} não encontrado no Firestore`);
+      // Marca o usuário como inexistente para evitar consultas futuras
+      nonExistentUsers.value.add(userId);
       Object.assign(userPhotoCache.value, { [userId]: '' });
     }
   }).catch(error => {
@@ -261,6 +251,11 @@ const getUserName = (userId: string): string => {
   if (!userId) {
     console.warn('getUserName chamado com userId vazio');
     return 'Usuário';
+  }
+
+  // Se o usuário já foi identificado como inexistente, retorna valor padrão
+  if (nonExistentUsers.value.has(userId)) {
+    return 'Usuário não encontrado';
   }
 
   // Se o nome já estiver no cache, retorna imediatamente
@@ -284,10 +279,10 @@ const getUserName = (userId: string): string => {
     if (userDoc.exists()) {
       const userData = userDoc.data();
       const name = userData.displayName || 'Usuário';
-      console.log(`Nome do usuário ${userId} obtido do Firestore: ${name}`);
       Object.assign(userNameCache.value, { [userId]: name });
     } else {
-      console.error(`Usuário ${userId} não encontrado no Firestore`);
+      // Marca o usuário como inexistente para evitar consultas futuras
+      nonExistentUsers.value.add(userId);
       Object.assign(userNameCache.value, { [userId]: 'Usuário não encontrado' });
     }
   }).catch(error => {
@@ -363,7 +358,7 @@ const formatPhoneDisplay = (countryCode: string, phone: string) => {
       <!-- Telefone -->
       <div class="flex items-center text-sm text-gray-600">
         <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5z" />
         </svg>
         <a 
           :href="getWhatsAppLink(lead.countryCode, lead.phone)" 
