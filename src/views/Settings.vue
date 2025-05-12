@@ -73,7 +73,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useAuthStore } from '../stores/auth';
-import { menuPermissionsService } from '../services/menuPermissionService';
+import { menuPermissionService } from '../services/menuPermissionService';
 
 const authStore = useAuthStore();
 const isLoading = ref(true);
@@ -83,7 +83,7 @@ const hasPermission = (permissionKey: string) => {
   const role = authStore.userData?.role;
   if (!role) return false;
   
-  return menuPermissionsService.hasPermission(permissionKey, role);
+  return menuPermissionService.hasPermission(permissionKey, role);
 };
 
 // Verificar se o usuário tem permissão para acessar pelo menos uma das configurações de email
@@ -103,7 +103,7 @@ onMounted(async () => {
   }
   
   // Carregar configurações de permissões de menu
-  await menuPermissionsService.loadMenuConfig();
+  await menuPermissionService.loadMenuConfig();
 
   console.log('Settings montado.');
   console.log('User role:', authStore.userData?.role);
