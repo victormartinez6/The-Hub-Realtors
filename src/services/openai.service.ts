@@ -11,7 +11,8 @@ const API_URL = 'https://api.openai.com/v1/chat/completions';
 const EMAIL_WIDTH = 600;
 
 // Coleção do Firestore para configurações do sistema
-const SYSTEM_SETTINGS_COLLECTION = 'system_settings';
+// Usando a estrutura existente no Firestore
+const SETTINGS_COLLECTION = 'settings';
 const API_KEYS_DOC = 'api_keys';
 
 class OpenAIService {
@@ -36,7 +37,7 @@ class OpenAIService {
       logger.debug('OpenAIService: Configurando chave da API do OpenAI no Firestore');
       
       // Criar ou atualizar o documento no Firestore
-      const apiKeysDocRef = doc(db, SYSTEM_SETTINGS_COLLECTION, API_KEYS_DOC);
+      const apiKeysDocRef = doc(db, SETTINGS_COLLECTION, API_KEYS_DOC);
       
       // Verificar se o documento já existe
       const apiKeysDoc = await getDoc(apiKeysDocRef);
@@ -82,7 +83,7 @@ class OpenAIService {
       const envApiKey = import.meta.env.VITE_OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
       
       // Verificar configuração no Firestore
-      const apiKeysDocRef = doc(db, SYSTEM_SETTINGS_COLLECTION, API_KEYS_DOC);
+      const apiKeysDocRef = doc(db, SETTINGS_COLLECTION, API_KEYS_DOC);
       const apiKeysDoc = await getDoc(apiKeysDocRef);
       
       const result: any = {
@@ -135,7 +136,7 @@ class OpenAIService {
       
       // Se não encontrou nas variáveis de ambiente, buscar do Firestore
       logger.debug('OpenAIService: Buscando API key do OpenAI do Firestore');
-      const apiKeysDocRef = doc(db, SYSTEM_SETTINGS_COLLECTION, API_KEYS_DOC);
+      const apiKeysDocRef = doc(db, SETTINGS_COLLECTION, API_KEYS_DOC);
       const apiKeysDoc = await getDoc(apiKeysDocRef);
       
       logger.debug(`OpenAIService: Documento do Firestore existe? ${apiKeysDoc.exists()}`);
@@ -175,7 +176,7 @@ class OpenAIService {
       
       // Verificar se temos uma API key
       if (!apiKey) {
-        throw new Error('API key do OpenAI não configurada. Entre em contato com o administrador do sistema.');
+        throw new Error('API key do OpenAI não configurada. Verifique se a chave está configurada corretamente no Firestore na coleção "settings", documento "api_keys", campo "openai".');
       }
 
       logger.debug('OpenAIService: Gerando template de email com ChatGPT');
