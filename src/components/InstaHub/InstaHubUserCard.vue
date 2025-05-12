@@ -41,19 +41,27 @@
           <!-- Informações de contato -->
           <div class="space-y-3 mb-6">
             <div v-if="user.email" class="flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#012928]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
-              <span class="text-gray-700">{{ user.email }}</span>
+              <a href="#" @click.prevent="sendEmail" class="text-gray-700 hover:text-[#012928] hover:underline">{{ user.email }}</a>
             </div>
             <div v-if="user.phone" class="flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+              <!-- Ícone do WhatsApp -->
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
               </svg>
-              <span class="text-gray-700">{{ user.phone }}</span>
+              <a href="#" @click.prevent="openWhatsApp" class="text-gray-700 hover:text-green-600 hover:underline">{{ user.phone }}</a>
+            </div>
+            <div v-if="user.website" class="flex items-center gap-2">
+              <!-- Ícone do Website -->
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+              </svg>
+              <a href="#" @click.prevent="openWebsite" class="text-blue-600 hover:underline">{{ user.website }}</a>
             </div>
             <div v-if="user.creci" class="flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#01FBA1]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
               </svg>
               <span class="text-gray-700">CRECI: {{ user.creci }}</span>
@@ -134,6 +142,23 @@ function goToProfile() {
 function sendEmail() {
   if (props.user.email) {
     window.location.href = `mailto:${props.user.email}`;
+  }
+}
+
+// Função para abrir website
+function openWebsite() {
+  if (props.user.website) {
+    window.open(props.user.website, '_blank');
+  }
+}
+
+// Função para abrir WhatsApp
+function openWhatsApp() {
+  if (props.user.phone) {
+    // Remover caracteres não numéricos do telefone
+    const phoneNumber = props.user.phone.replace(/\D/g, '');
+    // Abrir WhatsApp com o número formatado
+    window.open(`https://wa.me/${phoneNumber}`, '_blank');
   }
 }
 

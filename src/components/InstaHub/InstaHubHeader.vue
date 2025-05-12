@@ -1,7 +1,7 @@
 <template>
   <div class="flex items-center justify-between mb-8">
     <!-- Logo do InstaHub -->
-    <div class="h-16">
+    <div class="h-10">
       <img src="@/assets/images/InstaHub_Logo.svg" alt="InstaHub" class="h-full" />
     </div>
     

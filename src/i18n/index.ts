@@ -105,12 +105,24 @@ export const i18n = createI18n({
 
 // Função para alterar o idioma
 export const setLocale = (locale: Locale): void => {
+  // Atualizar o locale na instância i18n
+  // @ts-ignore - A propriedade global existe em runtime, mas o TypeScript não reconhece
   i18n.global.locale.value = locale;
+  
+  // Salvar no localStorage para persistência
   localStorage.setItem('locale', locale);
+  
+  // Atualizar o atributo lang do HTML
   document.querySelector('html')?.setAttribute('lang', locale);
+  
+  // Disparar um evento personalizado para notificar os componentes sobre a mudança de idioma
+  window.dispatchEvent(new CustomEvent('locale-changed', { detail: locale }));
+  
+  console.log('Idioma alterado para:', locale);
 };
 
 // Exportar função para obter o idioma atual
 export const getI18nLocale = (): Locale => {
+  // @ts-ignore - A propriedade global existe em runtime, mas o TypeScript não reconhece
   return i18n.global.locale.value as Locale;
 };

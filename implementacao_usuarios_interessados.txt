@@ -1,0 +1,171 @@
+// 1. Adicionar novas variáveis de estado no script setup
+
+// Buscar usuários que marcaram interesse nos posts do autor
+const isLoadingInteressados = ref(false);
+const interessadosNosPostsDoAutor = ref<any[]>([]);
+
+// 2. Adicionar função para buscar usuários interessados nos posts do autor
+
+async function fetchUsuariosInteressados() {
+  isLoadingInteressados.value = true;
+  try {
+    const db = getFirestore();
+    // Verificar se estamos visualizando o perfil de outro usuário
+    if (!userPosts.value.length) {
+      interessadosNosPostsDoAutor.value = [];
+      return;
+    }
+
+    // Obter todos os IDs de usuários que marcaram interesse nos posts do autor
+    const interessadosMap = new Map();
+    
+    for (const post of userPosts.value) {
+      if (post.interesseBy && post.interesseBy.length > 0) {
+        for (const userId of post.interesseBy) {
+          if (!interessadosMap.has(userId)) {
+            interessadosMap.set(userId, {
+              userId,
+              posts: [{ id: post.id, caption: post.caption }]
+            });
+          } else {
+            interessadosMap.get(userId).posts.push({ id: post.id, caption: post.caption });
+          }
+        }
+      }
+    }
+    
+    // Se não houver usuários interessados, retornar lista vazia
+    if (interessadosMap.size === 0) {
+      interessadosNosPostsDoAutor.value = [];
+      return;
+    }
+    
+    // Buscar informações dos usuários interessados
+    const usuariosPromises = Array.from(interessadosMap.keys()).map(async (userId) => {
+      const userDocRef = doc(db, 'users', userId);
+      const userDocSnap = await getDoc(userDocRef);
+      
+      if (userDocSnap.exists()) {
+        const userData = userDocSnap.data();
+        return {
+          ...interessadosMap.get(userId),
+          name: userData.name || 'Usuário',
+          avatar: userData.avatar || '',
+          role: userData.role || 'Usuário',
+          email: userData.email || '',
+          phone: userData.phone || ''
+        };
+      }
+      return null;
+    });
+    
+    const usuarios = await Promise.all(usuariosPromises);
+    interessadosNosPostsDoAutor.value = usuarios.filter(u => u !== null);
+  } catch (error) {
+    console.error('Erro ao buscar usuários interessados:', error);
+  } finally {
+    isLoadingInteressados.value = false;
+  }
+}
+
+// 3. Modificar a função fetchUserPosts para chamar fetchUsuariosInteressados após carregar os posts
+
+async function fetchUserPosts() {
+  isLoadingUserPosts.value = true;
+  try {
+    const db = getFirestore();
+    // Buscar documento do usuário do perfil pelo ID do documento (route.params.id)
+    const userDocRef = doc(db, 'users', String(route.params.id));
+    const userDocSnap = await getDoc(userDocRef);
+    const userPostsIds = userDocSnap.exists() ? userDocSnap.data().userPosts || [] : [];
+    if (userPostsIds.length > 0) {
+      const postsRef = collection(db, 'instahub_posts');
+      const postsQuery = query(postsRef, where('__name__', 'in', userPostsIds.slice(0, 10)));
+      const querySnapshot = await getDocs(postsQuery);
+      userPosts.value = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Buscar usuários interessados após carregar os posts
+      await fetchUsuariosInteressados();
+    } else {
+      userPosts.value = [];
+      interessadosNosPostsDoAutor.value = [];
+    }
+  } finally {
+    isLoadingUserPosts.value = false;
+  }
+}
+
+// 4. Adicionar a chamada da função no onMounted
+
+onMounted(() => {
+  fetchUserProfile();
+  fetchUserPosts(); // Já vai chamar fetchUsuariosInteressados internamente
+  fetchInteressePosts();
+});
+
+// 5. Adicionar componente para exibir os usuários interessados no template
+// Adicionar este código após a seção de "Posts publicados" (por volta da linha 314)
+
+<!-- Usuários interessados nos posts do autor -->
+<div v-if="interessadosNosPostsDoAutor.length > 0" class="mt-10">
+  <h2 class="text-xl font-bold text-[#012928] mb-4 flex items-center">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-[#01FBA1]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+    Usuários interessados nos seus posts
+  </h2>
+  <div v-if="isLoadingInteressados" class="flex justify-center items-center py-6">
+    <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#01FBA1]"></div>
+  </div>
+  <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div 
+      v-for="usuario in interessadosNosPostsDoAutor" 
+      :key="usuario.userId" 
+      class="bg-white rounded-xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border border-[#01FBA1]/20 p-4"
+    >
+      <div class="flex items-center mb-4">
+        <img :src="sanitizeUrl(usuario.avatar)" alt="Avatar" class="w-14 h-14 rounded-full object-cover border-2 border-[#01FBA1] mr-4" />
+        <div>
+          <h3 class="font-bold text-gray-800">{{ usuario.name }}</h3>
+          <p class="text-sm text-gray-500">{{ usuario.role }}</p>
+        </div>
+      </div>
+      
+      <div class="space-y-2">
+        <div v-if="usuario.email" class="flex items-center text-sm">
+          <i class="fas fa-envelope text-[#01FBA1] mr-2 w-5 text-center"></i>
+          <a :href="`mailto:${usuario.email}`" class="text-blue-600 hover:underline">{{ usuario.email }}</a>
+        </div>
+        <div v-if="usuario.phone" class="flex items-center text-sm">
+          <i class="fab fa-whatsapp text-[#01FBA1] mr-2 w-5 text-center"></i>
+          <a :href="`https://wa.me/${usuario.phone.replace(/\D/g, '')}`" target="_blank" class="text-blue-600 hover:underline">{{ usuario.phone }}</a>
+        </div>
+      </div>
+      
+      <div class="mt-4 pt-4 border-t border-gray-100">
+        <p class="text-sm text-gray-700 mb-2">Interessado em:</p>
+        <div class="space-y-2">
+          <div v-for="post in usuario.posts" :key="post.id" class="flex items-center text-sm">
+            <i class="fas fa-check-circle text-green-500 mr-2"></i>
+            <a 
+              @click="openPostFromId(post.id)" 
+              class="text-gray-800 hover:text-[#01FBA1] cursor-pointer truncate"
+            >
+              {{ post.caption }}
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+// 6. Adicionar função para abrir um post pelo ID
+
+async function openPostFromId(postId: string) {
+  // Encontrar o post nos posts do usuário
+  const post = userPosts.value.find(p => p.id === postId);
+  if (post) {
+    openPostModal(post);
+  }
+}

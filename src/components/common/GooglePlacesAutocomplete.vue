@@ -22,25 +22,6 @@ declare global {
   }
 }
 
-// Tipos para o Google Maps
-interface GoogleMapsPlace {
-  address_components?: any[];
-  formatted_address?: string;
-  geometry?: {
-    location?: {
-      lat: () => number;
-      lng: () => number;
-    };
-  };
-  name?: string;
-  place_id?: string;
-}
-
-interface GoogleMapsAutocomplete {
-  addListener: (event: string, callback: () => void) => void;
-  getPlace: () => GoogleMapsPlace;
-}
-
 const props = defineProps({
   modelValue: {
     type: String,
@@ -78,20 +59,85 @@ const handleInput = (event: Event) => {
 const initAutocomplete = () => {
   if (!autocompleteInput.value) return;
   
-  // Criar instância do Autocomplete
-  autocomplete = new window.google.maps.places.Autocomplete(autocompleteInput.value, {
-    types: ['address'],
-    fields: ['address_components', 'formatted_address', 'geometry', 'name', 'place_id']
-  });
-  
-  // Adicionar listener para quando um lugar é selecionado
-  autocomplete.addListener('place_changed', () => {
-    const place = autocomplete?.getPlace();
-    if (place && place.formatted_address) {
-      emit('update:modelValue', place.formatted_address);
-      emit('place-selected', place);
+  try {
+    // Tentar usar a nova API primeiro
+    if (window.google.maps.places.PlaceAutocompleteElement) {
+      console.log('Usando PlaceAutocompleteElement');
+      
+      // Criar o elemento de autocomplete
+      const element = new window.google.maps.places.PlaceAutocompleteElement({
+        types: ['address']
+      });
+      
+      // Substituir o input existente pelo elemento de autocomplete
+      if (autocompleteInput.value.parentNode) {
+        autocompleteInput.value.parentNode.replaceChild(element.element, autocompleteInput.value);
+        
+        // Configurar o elemento
+        element.element.value = props.modelValue;
+        element.element.placeholder = props.placeholder;
+        element.element.disabled = props.disabled;
+        element.element.classList.add(
+          'block', 'w-full', 'rounded-md', 'border', 'border-gray-300', 
+          'shadow-sm', 'focus:border-[#012928]', 'focus:ring', 
+          'focus:ring-[#012928]', 'focus:ring-opacity-50'
+        );
+        
+        // Adicionar listener para quando um lugar é selecionado
+        element.addListener('place_changed', () => {
+          const place = element.getPlace();
+          if (place) {
+            const formattedAddress = place.formattedAddress || place.formatted_address || '';
+            emit('update:modelValue', formattedAddress);
+            emit('place-selected', place);
+          }
+        });
+        
+        // Atualizar a referência
+        autocomplete = element;
+      }
+    } else {
+      // Fallback para a API antiga
+      console.log('Usando Autocomplete (legado)');
+      
+      // Criar instância do Autocomplete
+      autocomplete = new window.google.maps.places.Autocomplete(autocompleteInput.value, {
+        types: ['address']
+      });
+      
+      // Adicionar listener para quando um lugar é selecionado
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (place && place.formatted_address) {
+          emit('update:modelValue', place.formatted_address);
+          emit('place-selected', place);
+        }
+      });
     }
-  });
+  } catch (error) {
+    console.error('Erro ao inicializar o autocomplete:', error);
+    
+    // Fallback para a API antiga em caso de erro
+    try {
+      console.log('Tentando usar Autocomplete (legado) após erro');
+      
+      // Criar instância do Autocomplete
+      autocomplete = new window.google.maps.places.Autocomplete(autocompleteInput.value, {
+        types: ['address']
+      });
+      
+      // Adicionar listener para quando um lugar é selecionado
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (place && place.formatted_address) {
+          emit('update:modelValue', place.formatted_address);
+          emit('place-selected', place);
+        }
+      });
+    } catch (fallbackError) {
+      console.error('Erro ao usar fallback para Autocomplete:', fallbackError);
+    }
+  }
 };
 
 // Carregar a API do Google Maps

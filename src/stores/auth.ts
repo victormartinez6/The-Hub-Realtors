@@ -9,7 +9,10 @@ import {
   sendPasswordResetEmail as firebaseSendPasswordResetEmail,
   verifyPasswordResetCode,
   confirmPasswordReset,
-  updateProfile
+  updateProfile,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword as firebaseUpdatePassword
 } from 'firebase/auth';
 import { logger } from '../utils/logger';
 
@@ -36,7 +39,8 @@ export const useAuthStore = defineStore('auth', {
     isPartner: (state) => state.userData?.role === 'partner',
     isAdmin: (state) => state.userData?.role === 'super_admin',
     currentUser: (state) => state.user,
-    userRole: (state) => state.userData?.role
+    userRole: (state) => state.userData?.role,
+    userId: (state) => state.userData?.id || state.user?.uid
   },
 
   actions: {
@@ -227,6 +231,39 @@ export const useAuthStore = defineStore('auth', {
       } catch (error) {
         logger.error('Auth: Erro ao atualizar foto do perfil:', error);
         throw error;
+      }
+    },
+
+    async updatePassword(currentPassword: string, newPassword: string) {
+      if (!this.user || !this.user.email) {
+        throw new Error('Usuário não autenticado');
+      }
+      
+      try {
+        // Reautenticar o usuário antes de alterar a senha
+        const credential = EmailAuthProvider.credential(
+          this.user.email,
+          currentPassword
+        );
+        
+        await reauthenticateWithCredential(this.user, credential);
+        
+        // Atualizar a senha
+        await firebaseUpdatePassword(this.user, newPassword);
+        
+        logger.debug('Auth: Senha atualizada com sucesso');
+        return true;
+      } catch (error: any) {
+        logger.error('Auth: Erro ao atualizar senha:', error);
+        
+        // Mapear erros comuns
+        if (error.code === 'auth/wrong-password') {
+          throw new Error('Senha atual incorreta');
+        } else if (error.code === 'auth/weak-password') {
+          throw new Error('A nova senha é muito fraca. Use pelo menos 8 caracteres');
+        } else {
+          throw new Error(this.getErrorMessage(error.code));
+        }
       }
     },
 

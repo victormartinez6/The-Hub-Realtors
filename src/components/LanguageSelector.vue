@@ -2,24 +2,15 @@
   <div class="language-selector">
     <button 
       @click="toggleLanguageMenu" 
-      class="language-button flex items-center space-x-1 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+      class="language-button flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors duration-200 border border-gray-200 overflow-hidden"
+      :title="currentLanguage"
     >
-      <img :src="currentFlag" alt="Bandeira" class="w-5 h-5 rounded-sm" />
-      <span class="text-sm">{{ currentLanguage }}</span>
-      <svg 
-        xmlns="http://www.w3.org/2000/svg" 
-        class="h-4 w-4" 
-        fill="none" 
-        viewBox="0 0 24 24" 
-        stroke="currentColor"
-      >
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-      </svg>
+      <img :src="currentFlag" alt="Bandeira" class="w-6 h-6 rounded-full object-cover" />
     </button>
     
     <div 
       v-if="showLanguageMenu" 
-      class="absolute mt-2 right-0 w-48 bg-white rounded-md shadow-lg py-1 z-50"
+      class="absolute mt-2 right-0 w-40 bg-white rounded-lg shadow-lg py-1 z-50 border border-gray-200"
     >
       <button 
         v-for="lang in languages" 
@@ -27,7 +18,7 @@
         @click="changeLanguage(lang.code)" 
         class="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
       >
-        <img :src="lang.flag" alt="Bandeira" class="w-5 h-5 rounded-sm" />
+        <img :src="lang.flag" alt="Bandeira" class="w-5 h-5 rounded-full object-cover" />
         <span>{{ lang.name }}</span>
         <svg 
           v-if="lang.code === currentLocale" 
@@ -45,7 +36,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { useTranslation } from '@/composables/useTranslation';
+import { useTranslation } from '../composables/useTranslation';
 
 // Importar imagens das bandeiras
 import brFlag from '@/assets/flags/br.svg';
@@ -58,7 +49,7 @@ type Locale = 'pt' | 'en';
 const showLanguageMenu = ref(false);
 
 // Obter o i18n via nosso composable personalizado
-const { getLocale, setLocale } = useTranslation();
+const { setLocale, locale } = useTranslation();
 
 // Definir os idiomas disponíveis
 const languages = [
@@ -67,7 +58,7 @@ const languages = [
 ];
 
 // Obter o idioma atual
-const currentLocale = computed(() => getLocale() as Locale);
+const currentLocale = computed(() => locale.value as Locale);
 
 // Obter o nome do idioma atual
 const currentLanguage = computed(() => {

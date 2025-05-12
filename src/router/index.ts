@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
+import UserProfilePage from '../components/InstaHub/UserProfilePage.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -13,13 +14,13 @@ const router = createRouter({
     {
       path: '/instahub',
       name: 'instahub',
-      component: () => import('../views/InstaHubFeed.vue'),
+      component: () => import('../components/InstaHub/InstaHubFeed.vue'),
       meta: { requiresAuth: true }
     },
     {
       path: '/instahub/profile/:id',
       name: 'userProfileInstaHub',
-      component: () => import('../views/UserProfileInstaHub.vue'),
+      component: UserProfilePage,
       meta: { requiresAuth: true }
     },
     {
@@ -32,13 +33,43 @@ const router = createRouter({
       path: '/admin/users',
       name: 'userManagement',
       component: () => import('../views/admin/UserManagement.vue'),
-      meta: { requiresAuth: true, roles: ['super_admin'] }
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/admin/menu-permissions',
+      name: 'menuPermissions',
+      component: () => import('../views/MenuPermissionsView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/admin/notifications',
+      name: 'notificationManagement',
+      component: () => import('../views/notifications/NotificationManagement.vue'),
+      meta: { requiresAuth: true }
     },
     {
       path: '/admin/email-templates',
       name: 'emailTemplates',
       component: () => import('../views/EmailTemplates.vue'),
-      meta: { requiresAuth: true, roles: ['super_admin'] }
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/admin/email-test',
+      name: 'emailTest',
+      component: () => import('../views/EmailTestView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/admin/instahub',
+      name: 'instaHubAdmin',
+      component: () => import('../components/InstaHub/Admin/InstaHubAdminDashboard.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/instahub/admin',
+      name: 'instaHubAdminNew',
+      component: () => import('../components/InstaHub/Admin/InstaHubAdminDashboard.vue'),
+      meta: { requiresAuth: true }
     },
     {
       path: '/dashboard',
@@ -50,25 +81,37 @@ const router = createRouter({
       path: '/dashboard/broker',
       name: 'brokerDashboard',
       component: () => import('../views/dashboard/BrokerDashboard.vue'),
-      meta: { requiresAuth: true, roles: ['broker'] }
+      meta: { requiresAuth: true }
     },
     {
       path: '/dashboard/broker/realtors',
       name: 'brokerRealtors',
       component: () => import('../views/dashboard/BrokerRealtors.vue'),
-      meta: { requiresAuth: true, roles: ['broker'] }
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/dashboard/broker/email_sendgrid',
+      name: 'emailSendgrid',
+      component: () => import('../views/EmailSendGridView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/dashboard/broker/email_smtp',
+      name: 'emailSmtp',
+      component: () => import('../views/EmailSmtpView.vue'),
+      meta: { requiresAuth: true }
     },
     {
       path: '/dashboard/realtor',
       name: 'realtorDashboard',
       component: () => import('../views/dashboard/RealtorDashboard.vue'),
-      meta: { requiresAuth: true, roles: ['realtor'] }
+      meta: { requiresAuth: true }
     },
     {
       path: '/dashboard/partner',
       name: 'partnerDashboard',
       component: () => import('../views/dashboard/PartnerDashboard.vue'),
-      meta: { requiresAuth: true, roles: ['partner'] }
+      meta: { requiresAuth: true }
     },
     {
       path: '/leads',
@@ -83,9 +126,15 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/notifications',
+      name: 'notifications',
+      component: () => import('../views/notifications/NotificationsView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/calendar',
       name: 'calendar',
-      component: () => import('@/views/Calendar.vue'),
+      component: () => import('../views/Calendar.vue'),
       meta: { requiresAuth: true }
     },
     {
@@ -112,10 +161,11 @@ const router = createRouter({
       component: () => import('../views/Settings.vue'),
       meta: { requiresAuth: true }
     },
+
     {
       path: '/profile',
       name: 'profile',
-      component: () => import(/* webpackChunkName: "profile" */ '@/views/Profile.vue'),
+      component: () => import('../views/Profile.vue'),
       meta: { requiresAuth: true }
     },
     {
@@ -129,6 +179,36 @@ const router = createRouter({
       name: 'webhooks',
       component: () => import('../views/Webhooks.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/marketing',
+      name: 'marketing',
+      component: () => import('../views/Marketing.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/marketing/mail',
+      name: 'mailMarketing',
+      component: () => import('../views/MailMarketing.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/admin/update-menu-config',
+      name: 'updateMenuConfig',
+      component: () => import('../views/UpdateMenuConfig.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/dashboard/broker/email_smtp',
+      name: 'smtpSettings',
+      component: () => import('../components/SmtpSettings.vue'),
+      meta: { requiresAuth: true, roles: ['super_admin', 'broker'] }
+    },
+    {
+      path: '/dashboard/broker/email_sendgrid',
+      name: 'sendgridSettings',
+      component: () => import('../components/SendGridSettings.vue'),
+      meta: { requiresAuth: true, roles: ['super_admin', 'broker'] }
     },
     {
       path: '/forgot-password',
@@ -150,12 +230,16 @@ const router = createRouter({
     {
       path: '/agenda',
       redirect: '/calendar'
+    },
+    {
+      path: '/marketing/email-templates',
+      redirect: '/admin/email-templates'
     }
   ]
 });
 
 // Guarda de navegação
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore();
 
   // Aguardar a inicialização da autenticação
@@ -165,13 +249,10 @@ router.beforeEach(async (to, from, next) => {
   }
 
   const requiresAuth = to.meta.requiresAuth;
-  const allowedRoles = to.meta.roles as string[] || [];
 
   console.log('Navegando para:', to.path, {
     requiresAuth,
-    allowedRoles,
-    isAuthenticated: authStore.isAuthenticated,
-    userRole: authStore.userRole
+    isAuthenticated: authStore.isAuthenticated
   });
 
   // Se a rota requer autenticação
@@ -182,54 +263,15 @@ router.beforeEach(async (to, from, next) => {
       next('/login');
       return;
     }
-
-    // Verificar se o usuário tem o papel necessário
-    if (allowedRoles.length > 0 && !allowedRoles.includes(authStore.userData?.role)) {
-      console.log('Usuário não tem permissão, redirecionando para dashboard apropriado');
-      // Redirecionar para o dashboard apropriado baseado no papel
-      if (authStore.userData?.role === 'super_admin') {
-        next('/admin/users');
-      } else if (authStore.userData?.role === 'broker') {
-        next('/dashboard/broker');
-      } else if (authStore.userData?.role === 'realtor') {
-        next('/dashboard/realtor');
-      } else if (authStore.userData?.role === 'partner') {
-        next('/dashboard/partner');
-      } else {
-        next('/dashboard');
-      }
-      return;
-    }
   } else if (authStore.isAuthenticated && to.path === '/login') {
-    console.log('Usuário já autenticado, redirecionando para dashboard apropriado');
-    // Se o usuário já está autenticado e tenta acessar o login, redirecionar para o dashboard apropriado
-    if (authStore.userData?.role === 'super_admin') {
-      next('/admin/users');
-    } else if (authStore.userData?.role === 'broker') {
-      next('/dashboard/broker');
-    } else if (authStore.userData?.role === 'realtor') {
-      next('/dashboard/realtor');
-    } else if (authStore.userData?.role === 'partner') {
-      next('/dashboard/partner');
-    } else {
-      next('/dashboard');
-    }
+    console.log('Usuário já autenticado, redirecionando para dashboard');
+    next('/dashboard');
     return;
   }
 
-  // Se estiver acessando a rota raiz ('/'), redirecionar para o dashboard apropriado
+  // Se estiver acessando a rota raiz ('/'), redirecionar para o dashboard
   if (to.path === '/') {
-    if (authStore.userData?.role === 'super_admin') {
-      next('/admin/users');
-    } else if (authStore.userData?.role === 'broker') {
-      next('/dashboard/broker');
-    } else if (authStore.userData?.role === 'realtor') {
-      next('/dashboard/realtor');
-    } else if (authStore.userData?.role === 'partner') {
-      next('/dashboard/partner');
-    } else {
-      next('/dashboard');
-    }
+    next('/dashboard');
     return;
   }
 

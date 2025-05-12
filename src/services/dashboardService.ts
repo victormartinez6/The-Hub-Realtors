@@ -61,6 +61,15 @@ interface Property {
   createdAt: Date;
 }
 
+interface RecentActivity {
+  id: string;
+  userId: string;
+  brokerId?: string;
+  partnerId?: string;
+  timestamp: Date;
+  description: string;
+}
+
 export const dashboardService = {
   // Buscar estatísticas gerais baseadas na role do usuário
   async getStats(userId: string, role: UserRole): Promise<DashboardStats> {
@@ -400,5 +409,57 @@ export const dashboardService = {
       status: doc.data().status,
       createdAt: doc.data().createdAt?.toDate()
     }));
+  },
+
+  // Buscar atividades recentes
+  async getRecentActivities(userId: string, role: UserRole, limit: number = 10): Promise<RecentActivity[]> {
+    if (!userId || !role) {
+      return [];
+    }
+    
+    try {
+      // Definir a coleção de atividades
+      const activitiesCollection = collection(db, 'activities');
+      let q;
+      
+      // Consulta baseada no papel do usuário
+      if (role === 'broker') {
+        // Brokers veem atividades de toda a equipe
+        q = query(
+          activitiesCollection,
+          where('brokerId', '==', userId),
+          orderBy('timestamp', 'desc'),
+          limit(limit)
+        );
+      } else if (role === 'realtor') {
+        // Corretores veem apenas suas próprias atividades
+        q = query(
+          activitiesCollection,
+          where('userId', '==', userId),
+          orderBy('timestamp', 'desc'),
+          limit(limit)
+        );
+      } else if (role === 'partner') {
+        // Parceiros veem atividades relacionadas aos seus leads
+        q = query(
+          activitiesCollection,
+          where('partnerId', '==', userId),
+          orderBy('timestamp', 'desc'),
+          limit(limit)
+        );
+      } else {
+        return [];
+      }
+      
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        timestamp: doc.data().timestamp?.toDate()
+      }));
+    } catch (error) {
+      console.error('Erro ao buscar atividades recentes:', error);
+      return [];
+    }
   }
 };

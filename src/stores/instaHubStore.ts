@@ -159,8 +159,8 @@ export const useInstaHubStore = defineStore('instaHub', () => {
       // Buscar posts da última semana
       const recentPosts = await instaHubService.getRecentPosts(oneWeekAgo);
       
-      // Filtrar apenas posts com propriedades
-      const propertyPosts = recentPosts.filter(post => post.propertyInfo);
+      // Filtrar apenas posts com propriedades (garantir que não seja null ou undefined)
+      const propertyPosts = recentPosts.filter(post => post && post.propertyInfo);
       
       // Ordenar por número de interessados (do maior para o menor)
       const sortedPosts = propertyPosts.sort((a, b) => {
@@ -179,6 +179,8 @@ export const useInstaHubStore = defineStore('instaHub', () => {
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Erro ao carregar propriedades em destaque';
       console.error('Erro ao carregar propriedades em destaque:', err);
+      // Garantir que topWeeklyProperties seja sempre um array, mesmo em caso de erro
+      topWeeklyProperties.value = [];
     } finally {
       isLoading.value = false;
     }

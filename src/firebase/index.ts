@@ -28,3 +28,4 @@ if (import.meta.env.DEV) {
 }
 
 export default app;
+

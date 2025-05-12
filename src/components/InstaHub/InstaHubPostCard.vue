@@ -1,19 +1,27 @@
 <template>
+  <!-- Cabeçalho do Post -->
   <div 
     :id="`post-${post.id}`"
     class="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300"
   >
     <!-- Cabeçalho do Post -->
     <div class="p-4 flex items-center space-x-3">
-      <div class="flex items-center space-x-3 cursor-pointer" @click="showUserCard(post.author)">
-        <img 
-          :src="sanitizeUrl(post.author.photoURL || 'https://randomuser.me/api/portraits/lego/1.jpg')" 
-          alt="Avatar" 
-          class="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
-          @error="handleImageError($event, post.id)"
-        >
+      <div class="flex items-center space-x-3">
+        <div class="cursor-pointer" @click="showUserCard(post.author)">
+          <img 
+            :src="getUserPhotoUrl(post.author.id)" 
+            alt="Avatar" 
+            class="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
+            @error="handleImageError($event, post.id)"
+          >
+        </div>
         <div>
-          <h3 class="font-semibold text-gray-800">{{ post.author.name }}</h3>
+          <router-link 
+            :to="`/instahub/profile/${post.author.id}`" 
+            class="font-semibold text-gray-800 hover:text-[#012928] hover:underline transition-colors"
+          >
+            {{ getUserName(post.author.id) }}
+          </router-link>
           <p class="text-xs text-gray-500">{{ t(`roles.${post.author.role || 'user'}`) }}</p>
         </div>
       </div>
@@ -22,15 +30,11 @@
         <!-- Características principais -->
         <div v-if="post.propertyInfo?.features" class="flex items-center gap-4">
           <div v-if="post.propertyInfo.features.bedrooms !== undefined" class="flex items-center gap-1 text-sm text-gray-700">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
+            <span class="font-semibold">Bed:</span>
             {{ post.propertyInfo.features.bedrooms }}
           </div>
           <div v-if="post.propertyInfo.features.bathrooms !== undefined" class="flex items-center gap-1 text-sm text-gray-700">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
+            <span class="font-semibold">Bath:</span>
             {{ post.propertyInfo.features.bathrooms }}
           </div>
           <div v-if="post.propertyInfo.features.area !== undefined" class="flex items-center gap-1 text-sm text-gray-700">
@@ -38,6 +42,17 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h-3m-6 0h-3m6 0V7m3 14V7" />
             </svg>
             {{ post.propertyInfo.features.area }}m²
+          </div>
+          <div v-if="post.propertyInfo.address" class="flex items-center gap-1 text-sm text-gray-700">
+            <a :href="`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(post.propertyInfo.address)}`" 
+               target="_blank" 
+               title="Ver no Google Maps"
+               class="text-blue-500 hover:text-blue-700 transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </a>
           </div>
         </div>
         
@@ -52,64 +67,80 @@
         <!-- Botão Tenho Interesse -->
         <button 
           @click="toggleInteresse" 
-          class="flex items-center gap-1 px-2 py-1 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2"
+          class="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-300"
           :class="[
-            isInteressado ? 'bg-[#01FBA1] text-[#012928] hover:bg-[#00e090]' : 'bg-[#012928] text-white hover:bg-[#023e3d]'
+            isInteressado ? interestButtonColors[selectedInterestColor] : 'bg-[#451A37] text-white hover:bg-[#FF6A00] pulse-neon-lime'
           ]"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
           </svg>
-          {{ isInteressado ? 'Interessado' : 'Interesse' }}
+          <span>{{ isInteressado ? 'Interessado' : 'Interesse' }}</span>
+          <span class="ml-1 text-xs font-bold">{{ interesseCount }}</span>
         </button>
       </div>
     </div>
     
     <!-- Carrossel de mídia -->
-    <div class="relative">
-      <div class="relative overflow-hidden rounded-lg" style="max-height: 500px;">
-        <div v-if="imageLoading[post.id]" class="absolute inset-0 flex items-center justify-center bg-gray-100">
-          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#012928]"></div>
+    <div class="relative w-full">
+      <div class="relative w-full" style="max-height: 500px; min-height: 300px; aspect-ratio: 16/9;">
+        <!-- Indicador de carregamento centralizado -->
+        <div 
+          v-if="imageLoading[post.id]" 
+          class="absolute inset-0 flex items-center justify-center bg-gray-100/70 z-20"
+        >
+          <div class="flex flex-col items-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#01FBA1]"></div>
+            <span class="mt-2 text-sm text-gray-600">Carregando mídia...</span>
+          </div>
         </div>
         
-        <template v-for="(media, index) in post.mediaFiles" :key="index">
-          <!-- Imagem -->
-          <img 
-            v-if="isImage(media) && post.currentMediaIndex === index" 
-            :src="sanitizeUrl(media.url || media)" 
-            :alt="`Imagem ${index + 1} do post`"
-            class="w-full h-auto object-contain mx-auto"
-            style="max-height: 500px;"
-            @load="handleImageLoaded(post.id)"
-            @error="handleImageError($event, post.id)"
-          />
-          
-          <!-- Vídeo -->
-          <div v-else-if="isVideo(media) && post.currentMediaIndex === index" 
-               class="relative w-full" 
-               style="max-height: 500px; pointer-events: auto;">
-            <!-- Ícone de vídeo no canto superior direito -->
-            <div class="absolute top-2 right-2 bg-black/50 rounded-full p-1 z-10">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
+        <!-- Container para as mídias com posicionamento absoluto -->
+        <div class="absolute inset-0 w-full h-full flex items-center justify-center bg-gray-100">
+          <div 
+            v-for="(media, index) in post.mediaFiles" 
+            :key="`media-${index}`"
+            class="absolute inset-0 w-full h-full transition-opacity duration-500 flex items-center justify-center"
+            :class="index === post.currentMediaIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'"
+          >
+            <!-- Imagem -->
+            <img 
+              v-if="isImage(media)" 
+              :key="`img-${index}`"
+              :src="sanitizeUrl(media.url || media)" 
+              :alt="`Imagem ${index + 1} do post`"
+              class="w-full h-full object-cover object-center"
+              @load="handleImageLoaded(post.id)"
+              @error="handleImageError($event, post.id)"
+            />
             
-            <div class="video-container w-full h-full flex items-center justify-center">
+            <!-- Vídeo -->
+            <div 
+              v-else-if="isVideo(media)"
+              :key="`video-${index}`" 
+              class="h-full w-full flex items-center justify-center"
+            >
+              <!-- Ícone de vídeo no canto superior direito -->
+              <div class="absolute top-2 right-2 bg-black/50 rounded-full p-1 z-10">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+              </div>
+              
               <video 
-                ref="videoPlayer"
+                :ref="el => { if (el) videoRefs[index] = el }"
                 :src="sanitizeUrl(media.url || media)" 
                 controls
-                class="max-h-[500px] max-w-full object-contain"
+                class="w-full h-full object-cover object-center"
                 @loadeddata="handleImageLoaded(post.id)"
                 @error="handleImageError($event, post.id)"
                 playsinline
                 preload="auto"
-                style="pointer-events: auto !important; z-index: 1;"
+                style="pointer-events: auto !important;"
               ></video>
             </div>
           </div>
-        </template>
+        </div>
         
         <!-- Indicadores de mídia -->
         <div v-if="post.mediaFiles && post.mediaFiles.length > 1" class="absolute bottom-2 left-0 right-0 flex justify-center space-x-2 z-20">
@@ -157,34 +188,34 @@
             <svg :class="['h-6 w-6', isLiked ? 'text-red-500 fill-current' : '']" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
             </svg>
-            <span class="ml-1 text-sm">{{ post.likes?.length || 0 }}</span>
+            <span class="ml-1 text-sm">{{ likeCount }}</span>
           </button>
           <button @click="handleComment" class="flex items-center text-gray-600 hover:text-gray-800">
             <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
-            <span class="ml-1 text-sm">{{ post.comments?.length || 0 }}</span>
+            <span class="ml-1 text-sm">{{ commentCount }}</span>
           </button>
         </div>
         
         <h2 class="text-xl font-bold text-gray-800">{{ post.title }}</h2>
         <div class="flex items-center gap-2">
           <!-- MLS ID -->
-          <div v-if="post.propertyInfo?.mlsId" class="bg-gray-200 text-gray-800 text-sm font-medium px-3 py-1 rounded-lg shadow-md flex items-center gap-1">
+          <div v-if="post.propertyInfo?.mlsId" class="bg-gray-200 text-gray-800 text-sm font-medium px-3 py-1 rounded-xl shadow-md flex items-center gap-1">
             <span class="font-bold">MLS ID:</span>
             <span>{{ post.propertyInfo.mlsId }}</span>
           </div>
           
           <!-- Valor do imóvel -->
-          <div v-if="post.propertyInfo?.price" class="bg-[#012928] text-[#01FBA1] text-lg font-bold px-3 py-1 rounded-lg shadow-md flex items-center gap-2">
+          <div v-if="post.propertyInfo?.price" class="bg-[#FF6A00] text-[#FFFFFF] text-lg font-bold px-3 py-1 rounded-xl shadow-md flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <span>{{ new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(post.propertyInfo.price) }}</span>
           </div>
           
-          <!-- Ícones de edição e exclusão (visíveis apenas para o autor do post) -->
-          <div v-if="isMyPost" class="flex items-center gap-1">
+          <!-- Ícones de edição e exclusão (visíveis apenas para o autor do post ou administradores) -->
+          <div v-if="canDeletePost" class="flex items-center gap-1">
             <button 
               @click="openEditModal" 
               class="bg-blue-100 p-1.5 rounded-full hover:bg-blue-200 transition-colors"
@@ -200,7 +231,7 @@
               title="Excluir post"
             >
               <svg class="h-5 w-5 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-7 7-7-7" />
               </svg>
             </button>
           </div>
@@ -228,10 +259,10 @@
       <div v-if="post.propertyInfo" class="mb-4">
         <button 
           @click="toggleAccordion('details')" 
-          class="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition-colors duration-200"
+          class="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition-colors duration-200 rounded-xl"
         >
           <span class="font-medium text-gray-700 flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#01FBA1]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#451A37]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h-3m-6 0h-3m6 0V7m3 14V7" />
             </svg>
             Detalhes do Imóvel
@@ -250,7 +281,7 @@
         
         <div 
           v-show="accordionOpen.details" 
-          class="p-4 bg-white"
+          class="p-4 bg-white rounded-b-xl"
         >
           <!-- Informações básicas -->
           <div class="grid grid-cols-3 gap-4 mb-4 border border-gray-200 rounded-lg p-3">
@@ -286,7 +317,7 @@
             
             <div v-if="post.propertyInfo.mlsId" class="flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0H5a2 2 0 00-2 2v9a2 2 0 002 2h10a2 2 0 002-2V8m-4 0h-4m4 0h-4m6 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
               </svg>
               <div>
                 <p class="text-xs text-gray-500">MLS ID</p>
@@ -314,7 +345,7 @@
                   <p class="text-xs text-gray-500 text-center mt-1 cursor-pointer hover:text-[#012928]" @click="openGoogleMaps">
                     <span class="flex items-center justify-center gap-1">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0H5a2 2 0 00-2 2v9a2 2 0 002 2h10a2 2 0 002-2V8m-4 0h-4m4 0h-4m6 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
                       </svg>
                       Ver no Google Maps
                     </span>
@@ -338,7 +369,7 @@
           <!-- Características do imóvel -->
           <div v-if="post.propertyInfo.features" class="mb-4 border border-gray-200 rounded-lg p-3">
             <h4 class="font-medium text-gray-700 mb-2 flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#01FBA1]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#FF6A00]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
               Características
@@ -346,22 +377,18 @@
             
             <div class="grid grid-cols-3 gap-3">
               <div v-if="post.propertyInfo.features.bedrooms !== undefined" class="flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2h-5m-4 0H5a2 2 0 00-2 2v4a2 2 0 002 2h10a2 2 0 002-2V8m-4 0h-4m4 0h-4m6 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
-                </svg>
-                <span>{{ post.propertyInfo.features.bedrooms }} Quartos</span>
+                <span class="font-semibold">Bed:</span>
+                {{ post.propertyInfo.features.bedrooms }}
               </div>
               
               <div v-if="post.propertyInfo.features.bathrooms !== undefined" class="flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
-                </svg>
-                <span>{{ post.propertyInfo.features.bathrooms }} Banheiros</span>
+                <span class="font-semibold">Bath:</span>
+                {{ post.propertyInfo.features.bathrooms }}
               </div>
               
               <div v-if="post.propertyInfo.features.garageSpaces !== undefined" class="flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0H5a2 2 0 00-2 2v9a2 2 0 002 2h10a2 2 0 002-2V8m-4 0h-4m4 0h-4m6 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2h-5m-4 0H5a2 2 0 00-2 2v4a2 2 0 002 2h10a2 2 0 002-2V8m-4 0h-4m4 0h-4m6 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
                 </svg>
                 <span>{{ post.propertyInfo.features.garageSpaces }} Vagas</span>
               </div>
@@ -377,7 +404,7 @@
             <!-- Diferenciais -->
             <div class="mt-3 grid grid-cols-3 gap-2">
               <div v-if="post.propertyInfo.features.hasPool" class="flex items-center gap-1 text-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[#01FBA1]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[#451A37]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                 </svg>
                 <span>Piscina</span>
@@ -409,7 +436,7 @@
           <!-- Informações financeiras -->
           <div v-if="post.propertyInfo.hoa !== undefined || post.propertyInfo.commission !== undefined" class="mb-3 border border-gray-200 rounded-lg p-3">
             <h4 class="font-medium text-gray-700 mb-2 flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#01FBA1]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#FF6A00]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               Informações Financeiras
@@ -547,7 +574,7 @@
               @click="showEditModal = false" 
               class="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
               Cancelar
@@ -556,7 +583,7 @@
               @click="saveEdit" 
               class="flex items-center gap-2 px-4 py-2 bg-[#012928] text-white rounded-md hover:bg-[#023e3d] focus:outline-none focus:ring-2 focus:ring-[#01FBA1]"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
               Salvar
@@ -624,12 +651,15 @@
   </div>
 </template>
 
-<script setup lang="ts">import { useTranslation } from '@/composables/useTranslation';
-import { defineProps, defineEmits } from 'vue';
-import { useAuthStore } from '@/stores/auth';
-import { useInstaHubStore } from '@/stores/instaHubStore';
-import { ref, computed, watch, onMounted } from 'vue';
-import { googleMapsConfig } from '@/config/googleMaps';
+<script setup lang="ts">
+import { ref, computed, onMounted, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useInstaHubStore } from '../../stores/instaHubStore';
+import { useAuthStore } from '../../stores/auth';
+import { useNotificationStore } from '../../stores/notifications/notificationStore';
+import { googleMapsConfig } from '../../config/googleMaps';
+import { db } from '../../firebase';
+import { doc, getDoc, addDoc, collection, Timestamp } from 'firebase/firestore';
 
 // Constante para a chave da API do Google Maps
 const googleMapsApiKey = googleMapsConfig.apiKey;
@@ -647,9 +677,15 @@ const emit = defineEmits(['openModal', 'showUserCard', 'comment', 'delete']);
 // Stores
 const authStore = useAuthStore();
 const instaHubStore = useInstaHubStore();
+const notificationStore = useNotificationStore();
 
 // Estado para carregamento de imagens
 const imageLoading = ref<Record<string, boolean>>({});
+
+// Cache para fotos e nomes de usuários
+const userPhotoCache = ref<Record<string, string>>({});
+const userNameCache = ref<Record<string, string>>({});
+const nonExistentUsers = ref<Record<string, boolean>>({});
 
 // Estado para acordeão
 const accordionOpen = ref({
@@ -669,20 +705,136 @@ const formattedEditPrice = ref('');
 const showCommentsModal = ref(false);
 const newComment = ref('');
 
-// Verificar se o post é do usuário atual
-const isMyPost = computed(() => {
-  // Verificar se o autor do post é o usuário atual
-  const currentUserId = authStore.user?.uid;
-  // O post pode ter userId ou author.id
-  const result = (props.post.userId === currentUserId) || 
-         (props.post.author?.id === currentUserId) ||
-         (props.post.authorId === currentUserId);
-  
-  return result;
-});
+// Referências para vídeos
+const videoRefs = ref<Record<number, HTMLVideoElement>>({});
 
-// Garantir que o post tenha currentMediaIndex inicializado
+// Opções de cores para o botão de interesse
+const interestButtonColors = {
+  blue: 'bg-blue-600 text-white hover:bg-blue-700',
+  indigo: 'bg-indigo-600 text-white hover:bg-indigo-700',
+  purple: 'bg-purple-600 text-white hover:bg-purple-700',
+  teal: 'bg-teal-600 text-white hover:bg-teal-700',
+  green: 'bg-green-600 text-white hover:bg-green-700',
+  red: 'bg-red-600 text-white hover:bg-red-700',
+  orange: 'bg-orange-600 text-white hover:bg-orange-700',
+  amber: 'bg-amber-600 text-white hover:bg-amber-700',
+  pink: 'bg-pink-600 text-white hover:bg-pink-700',
+  default: 'bg-[#012928] text-white hover:bg-[#023e3d] pulse-neon'
+};
+
+// Cor selecionada para o botão de interesse (altere para qualquer uma das opções acima)
+const selectedInterestColor = 'purple';
+
+// Função para obter a foto do perfil do usuário
+const getUserPhotoUrl = (userId: string): string => {
+  // Verificação de segurança
+  if (!userId) {
+    console.warn('getUserPhotoUrl chamado com userId vazio');
+    return '';
+  }
+
+  // Verificar se o usuário está marcado como não existente
+  if (nonExistentUsers.value[userId]) {
+    console.log(`Usuário ${userId} já foi marcado como não existente`);
+    return '';
+  }
+
+  // Se a URL já estiver no cache, retorna imediatamente
+  if (userPhotoCache.value[userId]) {
+    console.log(`Usando URL do cache para ${userId}: ${userPhotoCache.value[userId]}`);
+    return userPhotoCache.value[userId];
+  }
+  
+  // URL vazia enquanto a busca assíncrona está em andamento
+  const loadingUrl = '';
+  
+  // Inicia a busca assíncrona e atualiza o cache quando concluída
+  getDoc(doc(db, 'users', userId)).then(userDoc => {
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      console.log(`Dados do usuário ${userId} obtidos diretamente do Firestore:`, userData);
+      
+      let photoUrl = null;
+      
+      if (userData.photoURL) {
+        photoUrl = userData.photoURL;
+        console.log(`Usando photoURL do Firestore para ${userId}: ${photoUrl}`);
+      } else if (userData.profilePicture) {
+        photoUrl = userData.profilePicture;
+        console.log(`Usando profilePicture do Firestore para ${userId}: ${photoUrl}`);
+      }
+      
+      if (photoUrl) {
+        console.log(`Atualizando cache com foto do Firestore para ${userId}: ${photoUrl}`);
+        Object.assign(userPhotoCache.value, { [userId]: photoUrl });
+      } else {
+        // Se não tiver foto, deixa vazio para mostrar as iniciais
+        console.log(`Usuário ${userId} não tem foto de perfil`);
+        Object.assign(userPhotoCache.value, { [userId]: '' });
+      }
+    } else {
+      console.error(`Usuário ${userId} não encontrado no Firestore`);
+      Object.assign(nonExistentUsers.value, { [userId]: true });
+      Object.assign(userPhotoCache.value, { [userId]: '' });
+    }
+  }).catch(error => {
+    console.error('Erro ao buscar usuário no Firestore:', error);
+    Object.assign(userPhotoCache.value, { [userId]: '' });
+  });
+  
+  // Retorna a URL vazia enquanto a busca assíncrona está em andamento
+  return loadingUrl;
+};
+
+// Função para obter o nome do usuário
+const getUserName = (userId: string): string => {
+  // Verificação de segurança
+  if (!userId) {
+    console.warn('getUserName chamado com userId vazio');
+    return 'Usuário';
+  }
+
+  // Verificar se o usuário está marcado como não existente
+  if (nonExistentUsers.value[userId]) {
+    console.log(`Usuário ${userId} já foi marcado como não existente`);
+    return 'Usuário não encontrado';
+  }
+
+  // Se o nome já estiver no cache, retorna imediatamente
+  if (userNameCache.value[userId]) {
+    return userNameCache.value[userId];
+  }
+  
+  // Nome padrão enquanto a busca assíncrona está em andamento
+  const defaultName = 'Carregando...';
+  
+  // Inicia a busca assíncrona e atualiza o cache quando concluída
+  getDoc(doc(db, 'users', userId)).then(userDoc => {
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      const name = userData.displayName || user.name || 'Usuário';
+      console.log(`Nome do usuário ${userId} obtido do Firestore: ${name}`);
+      Object.assign(userNameCache.value, { [userId]: name });
+    } else {
+      console.error(`Usuário ${userId} não encontrado no Firestore`);
+      Object.assign(nonExistentUsers.value, { [userId]: true });
+      Object.assign(userNameCache.value, { [userId]: 'Usuário não encontrado' });
+    }
+  }).catch(error => {
+    console.error(`Erro ao buscar nome do usuário ${userId}:`, error);
+    Object.assign(userNameCache.value, { [userId]: 'Erro' });
+  });
+  
+  return defaultName;
+};
+
+// Carregar dados dos usuários quando o componente for montado
 onMounted(() => {
+  if (props.post && props.post.author && props.post.author.id) {
+    getUserPhotoUrl(props.post.author.id);
+    getUserName(props.post.author.id);
+  }
+  
   if (props.post && !props.post.currentMediaIndex && props.post.mediaFiles?.length > 0) {
     props.post.currentMediaIndex = 0;
     console.log('Inicializando currentMediaIndex para o post:', props.post.id);
@@ -700,6 +852,43 @@ const isLiked = computed(() => {
 
 const isInteressado = computed(() => {
   return props.post.interesseBy?.includes(authStore.user?.uid) || false;
+});
+
+// Verificar se o post é do usuário atual
+const isMyPost = computed(() => {
+  // Verificar se o autor do post é o usuário atual
+  const currentUserId = authStore.user?.uid;
+  // O post pode ter userId ou author.id
+  const result = (props.post.userId === currentUserId) || 
+         (props.post.author?.id === currentUserId) ||
+         (props.post.authorId === currentUserId);
+  
+  return result;
+});
+
+// Verificar se o usuário é administrador
+const isAdmin = computed(() => {
+  return authStore.userRole === 'admin' || authStore.userRole === 'super_admin';
+});
+
+// Verificar se o usuário pode excluir o post (autor ou administrador)
+const canDeletePost = computed(() => {
+  return isMyPost.value || isAdmin.value;
+});
+
+// Estado para contador de interessados
+const interesseCount = computed(() => {
+  return props.post.interesseBy?.length || 0;
+});
+
+// Estado para contador de likes
+const likeCount = computed(() => {
+  return props.post.likedBy?.length || 0;
+});
+
+// Estado para contador de comentários
+const commentCount = computed(() => {
+  return props.post.comments?.length || 0;
 });
 
 // Função para abrir/fechar acordeão
@@ -887,6 +1076,210 @@ function openGoogleMaps() {
   }
 }
 
+// Função para mostrar o cartão de usuário
+function showUserCard(user: any) {
+  // Garantir que temos um objeto de usuário completo
+  if (user && user.id) {
+    // Buscar dados atualizados do usuário no Firestore
+    getDoc(doc(db, 'users', user.id)).then(userDoc => {
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        // Criar um objeto de usuário completo
+        const completeUser = {
+          id: user.id,
+          name: userData.displayName || user.name || 'Usuário',
+          role: userData.role || user.role || 'user',
+          photoURL: userData.photoURL || userData.profilePicture || user.photoURL || '',
+          email: userData.email || user.email || '',
+          phone: userData.phone || user.phone || '',
+          website: userData.website || user.website || '',
+          creci: userData.creci || user.creci || '',
+          bio: userData.bio || user.bio || ''
+        };
+        // Emitir o evento com o usuário completo
+        emit('showUserCard', completeUser);
+      } else {
+        // Se o usuário não existir no Firestore, usar os dados que temos
+        emit('showUserCard', {
+          id: user.id,
+          name: user.name || 'Usuário não encontrado',
+          role: user.role || 'user',
+          photoURL: user.photoURL || '',
+          email: user.email || '',
+          phone: user.phone || '',
+          website: user.website || '',
+          creci: user.creci || '',
+          bio: user.bio || ''
+        });
+      }
+    }).catch(error => {
+      console.error('Erro ao buscar dados do usuário:', error);
+      // Em caso de erro, usar os dados que temos
+      emit('showUserCard', user);
+    });
+  } else {
+    // Se não tivermos um ID de usuário, apenas passar os dados que temos
+    emit('showUserCard', user);
+  }
+}
+
+// Função para sanitizar URLs
+function sanitizeUrl(url: string | undefined): string {
+  if (!url) return '';
+  
+  // Verificar se a URL já é segura
+  if (url.startsWith('https://') || url.startsWith('http://')) {
+    return url;
+  }
+  
+  // Adicionar protocolo https se não existir
+  if (url.startsWith('//')) {
+    return 'https:' + url;
+  }
+  
+  return url;
+}
+
+// Função para marcar uma imagem como carregada
+function handleImageLoaded(postId: string) {
+  if (postId) {
+    imageLoading.value[postId] = false;
+    console.log(`Mídia carregada com sucesso para o post ${postId}`);
+  }
+}
+
+// Função para lidar com erros de carregamento de mídia
+function handleImageError(e: any, postId: string) {
+  if (postId) {
+    imageLoading.value[postId] = false;
+    console.error(`Erro ao carregar mídia para o post ${postId}: ${e}`);
+  }
+}
+
+// Função para lidar com comentários
+function handleComment() {
+  showCommentsModal.value = true;
+}
+
+// Funções para interação com posts
+async function toggleLike() {
+  try {
+    const wasLiked = isLiked.value;
+    await instaHubStore.toggleLike(props.post.id);
+    
+    // Enviar notificação ao autor do post quando um usuário curte o post
+    if (!wasLiked && props.post.author && props.post.author.id) {
+      try {
+        // Criar notificação diretamente
+        const notificationData = {
+          title: 'Curtida',
+          message: `${authStore.user?.displayName || 'Alguém'} curtiu sua publicação.`,
+          timestamp: Timestamp.fromDate(new Date()),
+          read: false,
+          type: 'info',
+          sender: {
+            id: authStore.user?.id || 'system',
+            name: authStore.user?.displayName || 'Sistema',
+            role: authStore.user?.role || 'system'
+          },
+          recipient: {
+            id: props.post.author.id
+          }
+        };
+        
+        await addDoc(collection(db, 'notifications'), notificationData);
+      } catch (error) {
+        console.warn('Não foi possível enviar notificação:', error);
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao alternar like:', error);
+  }
+}
+
+// Função para abrir o modal do post
+function openPostModal(post: any, tab: string = 'details') {
+  emit('openModal', post, tab);
+}
+
+// Função para adicionar um comentário
+async function addComment() {
+  if (!newComment.value.trim()) return;
+  
+  try {
+    await instaHubStore.addComment(props.post.id, newComment.value);
+    
+    // Enviar notificação ao autor do post
+    if (props.post.author && props.post.author.id) {
+      try {
+        // Criar notificação diretamente
+        const notificationData = {
+          title: 'Comentário',
+          message: `${authStore.user?.displayName || 'Alguém'} comentou em sua publicação: "${newComment.value.substring(0, 50)}${newComment.value.length > 50 ? '...' : ''}"`,
+          timestamp: Timestamp.fromDate(new Date()),
+          read: false,
+          type: 'info',
+          sender: {
+            id: authStore.user?.id || 'system',
+            name: authStore.user?.displayName || 'Sistema',
+            role: authStore.user?.role || 'system'
+          },
+          recipient: {
+            id: props.post.author.id
+          }
+        };
+        
+        await addDoc(collection(db, 'notifications'), notificationData);
+      } catch (error) {
+        console.warn('Não foi possível enviar notificação:', error);
+      }
+    }
+    
+    newComment.value = ''; // Limpar o campo após enviar
+  } catch (error) {
+    console.error('Erro ao adicionar comentário:', error);
+  }
+}
+
+// Função para alternar o estado de "interesse"
+async function toggleInteresse() {
+  try {
+    const wasInterested = isInteressado.value;
+    await instaHubStore.toggleInteresse(props.post.id);
+    
+    // Enviar notificação ao autor do post quando um usuário marca interesse
+    if (!wasInterested && props.post.author && props.post.author.id) {
+      try {
+        // Criar notificação diretamente
+        const notificationData = {
+          title: 'Interesse',
+          message: `${authStore.user?.displayName || 'Alguém'} demonstrou interesse em seu imóvel ${props.post.propertyInfo?.address ? `em ${props.post.propertyInfo.address}` : ''}.`,
+          timestamp: Timestamp.fromDate(new Date()),
+          read: false,
+          type: 'success',
+          sender: {
+            id: authStore.user?.id || 'system',
+            name: authStore.user?.displayName || 'Sistema',
+            role: authStore.user?.role || 'system'
+          },
+          recipient: {
+            id: props.post.author.id
+          }
+        };
+        
+        await addDoc(collection(db, 'notifications'), notificationData);
+      } catch (error) {
+        console.warn('Não foi possível enviar notificação:', error);
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao alternar interesse:', error);
+  }
+}
+
+// Internacionalização
+const { t } = useI18n();
+
 // Função para verificar se o arquivo é uma imagem
 function isImage(media: any): boolean {
   if (!media) return false;
@@ -984,88 +1377,76 @@ function isVideo(media: any): boolean {
   
   return false;
 }
-
-// Funções para interação com posts
-function toggleLike() {
-  instaHubStore.toggleLike(props.post.id);
-}
-
-function toggleInteresse() {
-  instaHubStore.toggleInteresse(props.post.id);
-}
-
-// Função para abrir o modal do post
-function openPostModal(post: any, tab: string = 'details') {
-  emit('openModal', post, tab);
-}
-
-// Função para mostrar o cartão de usuário
-function showUserCard(user: any) {
-  emit('showUserCard', user);
-}
-
-// Função para sanitizar URLs
-function sanitizeUrl(url: string | undefined): string {
-  if (!url) return '';
-  
-  // Verificar se a URL já é segura
-  if (url.startsWith('https://') || url.startsWith('http://')) {
-    return url;
-  }
-  
-  // Adicionar protocolo https se não existir
-  if (url.startsWith('//')) {
-    return 'https:' + url;
-  }
-  
-  return url;
-}
-
-// Função para marcar uma imagem como carregada
-function handleImageLoaded(postId: string) {
-  if (postId) {
-    imageLoading.value[postId] = false;
-    console.log(`Mídia carregada com sucesso para o post ${postId}`);
-  }
-}
-
-// Função para lidar com erros de carregamento de mídia
-function handleImageError(e: any, postId: string) {
-  if (postId) {
-    imageLoading.value[postId] = false;
-    console.error(`Erro ao carregar mídia para o post ${postId}: ${e}`);
-  }
-}
-
-// Função para lidar com comentários
-function handleComment() {
-  showCommentsModal.value = true;
-}
-
-// Função para adicionar um comentário
-async function addComment() {
-  if (!newComment.value.trim()) return;
-  
-  try {
-    await instaHubStore.addComment(props.post.id, newComment.value);
-    newComment.value = ''; // Limpar o campo após enviar
-  } catch (error) {
-    console.error('Erro ao adicionar comentário:', error);
-  }
-}
-
-// Internacionalização
-const { t } = useTranslation();
 </script>
 
 <style scoped>
 /* Animação de transição para o carrossel */
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.2s ease;
+  transition: opacity 0.5s ease;
 }
+
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+/* Efeito de pulsação neon para o botão de interesse */
+.pulse-neon-lime {
+  animation: pulse-neon-lime-effect 2s infinite;
+  box-shadow: 0 0 5px rgba(210, 255, 31, 0.2);
+  position: relative;
+}
+
+.pulse-neon-active {
+  animation: pulse-neon-active-effect 2s infinite;
+  box-shadow: 0 0 8px rgba(210, 255, 31, 0.6);
+  position: relative;
+}
+
+@keyframes pulse-neon-lime-effect {
+  0% {
+    box-shadow: 0 0 5px rgba(210, 255, 31, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(210, 255, 31, 0.6), 0 0 20px rgba(210, 255, 31, 0.4);
+    transform: scale(1.03);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(210, 255, 31, 0.2);
+  }
+}
+
+@keyframes pulse-neon-active-effect {
+  0% {
+    box-shadow: 0 0 8px rgba(210, 255, 31, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(210, 255, 31, 0.8), 0 0 30px rgba(210, 255, 31, 0.6);
+    transform: scale(1.05);
+  }
+  100% {
+    box-shadow: 0 0 8px rgba(210, 255, 31, 0.6);
+  }
+}
+
+/* Efeito de pulsação neon para o botão de interesse (original) */
+.pulse-neon {
+  animation: pulse-neon-effect 2s infinite;
+  box-shadow: 0 0 5px rgba(1, 251, 161, 0.2);
+  position: relative;
+}
+
+@keyframes pulse-neon-effect {
+  0% {
+    box-shadow: 0 0 5px rgba(1, 251, 161, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(1, 251, 161, 0.6), 0 0 20px rgba(1, 251, 161, 0.4);
+    transform: scale(1.03);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(1, 251, 161, 0.2);
+  }
 }
 </style>

@@ -1,6 +1,6 @@
 <template>
   <div class="relative group">
-    <div class="absolute -inset-1 bg-gradient-to-r from-[#01FBA1] to-[#01FBA1] rounded-lg blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
+    <div class="absolute -inset-1 bg-gradient-to-r from-[#012928] to-[#012928] rounded-lg blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
     <div class="relative px-4 py-4 bg-white ring-1 ring-gray-900/5 rounded-lg leading-none flex items-top justify-start">
       <div class="w-full">
         <div class="flex justify-between items-start mb-4">
@@ -90,8 +90,8 @@ const createChart = () => {
   }
 
   const gradient = ctx.createLinearGradient(0, 0, 0, 160);
-  gradient.addColorStop(0, 'rgba(1, 251, 161, 0.2)');
-  gradient.addColorStop(1, 'rgba(1, 251, 161, 0)');
+  gradient.addColorStop(0, 'rgba(1, 29, 40, 0.2)');
+  gradient.addColorStop(1, 'rgba(1, 29, 40, 0)');
 
   chart = new Chart(ctx, {
     type: 'line',
@@ -100,13 +100,13 @@ const createChart = () => {
       datasets: [{
         label: props.currencyPair,
         data: props.historicalData.map(item => item.rate),
-        borderColor: '#01FBA1',
+        borderColor: '#012928',
         backgroundColor: gradient,
         tension: 0.4,
         fill: true,
         pointRadius: 0,
         pointHoverRadius: 4,
-        pointHoverBackgroundColor: '#01FBA1',
+        pointHoverBackgroundColor: '#012928',
         pointHoverBorderColor: '#fff',
         pointHoverBorderWidth: 2
       }]

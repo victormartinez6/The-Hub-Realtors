@@ -1,13 +1,21 @@
 import { FileAttachment } from '../services/fileService';
 
-export type UserRole = 'super_admin' | 'broker' | 'realtor' | 'partner';
+export type UserRole = 'super_admin' | 'admin' | 'broker' | 'realtor' | 'partner' | 'user' | 'system' | 'all';
+
+export interface MarketingConfig {
+  headerWidth: number;
+  logoUrl: string;
+  headerImageUrl: string; // URL da imagem de header padrão
+  primaryColor: string;
+  secondaryColor: string;
+}
 
 export interface User {
   uid: string;
   email: string;
-  role: UserRole;
   displayName: string;  // Nome completo do usuário
-  name: string;        // Nome curto/apelido (opcional)
+  name?: string;        // Nome curto/apelido (opcional)
+  senderName?: string; // Nome a ser usado como remetente de emails
   brokerId?: string;
   companyName?: string;
   createdAt: string;
@@ -24,6 +32,16 @@ export interface User {
   city?: string;
   state?: string;
   zipCode?: string;
+  // Configurações de marketing
+  marketingConfig?: MarketingConfig;
+  role: UserRole;
+  // Novos campos para redes sociais
+  website?: string;
+  instagram?: string;
+  facebook?: string;
+  linkedin?: string;
+  youtube?: string;
+  tiktok?: string;
 }
 
 export interface Lead {

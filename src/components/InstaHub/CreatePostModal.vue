@@ -14,8 +14,14 @@
           class="fixed inset-0 bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center z-[60]"
         >
           <div class="bg-white p-8 rounded-xl shadow-xl flex flex-col items-center">
-            <img src="@/assets/images/favicon.svg" alt="Loading" class="h-24 w-24 animate-spin mb-6" />
-            <p class="text-xl font-medium text-[#012928]">Publishing...</p>
+            <img src="@/assets/images/InstaHub_pin.svg" class="h-24 w-24 mb-6" />
+            <div class="w-full max-w-xs bg-gray-200 rounded-full h-2.5 mb-4 overflow-hidden">
+              <div 
+                class="bg-[#FF6A00] h-2.5 rounded-full transition-all duration-300 ease-out" 
+                :style="{ width: `${uploadProgress}%` }"
+              ></div>
+            </div>
+            <p class="text-xl font-medium text-[#012928]">Publishing... {{ uploadProgress }}%</p>
           </div>
         </div>
         
@@ -24,7 +30,7 @@
           <!-- Header -->
           <div class="flex items-center justify-between p-6 pb-4 border-b border-gray-200">
             <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-[#012928]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-[#451A37]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
               Create Post
@@ -60,13 +66,13 @@
                   class="px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex flex-col items-center justify-center gap-1 focus:outline-none"
                   :class="[
                     postCategory === category 
-                      ? 'bg-[#01FBA1] text-[#012928] shadow-md scale-105' 
+                      ? 'bg-[#451A37] text-white shadow-md scale-105' 
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   ]"
                 >
                   <!-- Ícones para cada categoria -->
                   <svg v-if="category === 'Imóveis à Venda'" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-2 2h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 002 2h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                   </svg>
                   <svg v-else-if="category === 'Imóveis para Alugar'" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -86,9 +92,9 @@
             </div>
             
             <!-- Upload da Foto de Capa -->
-            <div class="space-y-4 mb-6 border-2 border-[#01FBA1] rounded-lg p-4">
+            <div class="space-y-4 mb-6 border-2 border-[#451A37] rounded-lg p-4">
               <label class="block text-sm font-medium text-gray-700 flex items-center gap-2" for="coverPhoto">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#012928]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#451A37]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 Cover Photo (Featured)
@@ -100,10 +106,10 @@
                 <!-- Área clicável para upload quando não há foto de capa -->
                 <div 
                   v-if="!coverPhoto"
-                  class="border-2 border-dashed border-[#01FBA1] rounded-lg p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors duration-200"
+                  class="border-2 border-dashed border-[#451A37] rounded-lg p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors duration-200"
                   @click="openCoverPhotoPicker"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-[#012928]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-[#451A37]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                   </svg>
                   <p class="mt-2 text-sm text-gray-600">Click to select cover photo</p>
@@ -113,6 +119,7 @@
                 <!-- Input de arquivo oculto para a capa -->
                 <input 
                   ref="coverPhotoInput"
+                  id="cover-photo-input"
                   type="file" 
                   accept="image/*" 
                   class="hidden"
@@ -181,6 +188,7 @@
                 <!-- Input de arquivo oculto -->
                 <input 
                   ref="fileInput"
+                  id="file-input"
                   type="file" 
                   accept="image/*,video/*" 
                   class="hidden"
@@ -220,7 +228,7 @@
                           <!-- Indicador de tipo de mídia -->
                           <div class="absolute top-2 right-2 bg-black/50 rounded-full p-1 z-20">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-4.553A1 1 0 0121 8.447zM14.42 9.179L5.6 16.96a1.5 1.5 0 01-1.468-.146 3.5 3.5 0 01-.671-1.958 3.5 3.5 0 01-1.962-.671 1.5 1.5 0 01-1.964 1.23l-8.36 8.36a1.5 1.5 0 01-2.12-.005l-2.25-2.25a.5.5 0 00-.46-.342 1.5 1.5 0 00-.468-.346l-8.36-8.36A1.5 1.5 0 015 7.05 1.5 1.5 0 016.46 5.46A1.5 1.5 0 018 6.84v.86a1.5 1.5 0 001.06.44l2.25 2.25a.5.5 0 00.46.342 1.5 1.5 0 00.468.346l8.36 8.36a1.5 1.5 0 001.964 0 1.5 1.5 0 00.44-1.06V9.81l8.36-8.36A1.5 1.5 0 0121 5.27a1.5 1.5 0 00-1.06-.44l-2.25-2.25a.5.5 0 00-.46-.342 1.5 1.5 0 00-.468-.346l-8.36-8.36z" />
                             </svg>
                           </div>
                         </div>
@@ -345,7 +353,7 @@
             <div class="pt-4 border-t border-gray-200 mb-6">
               <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#012928]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-2 2h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 002 2h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                 </svg>
                 Property Information
               </h3>
@@ -377,16 +385,15 @@
                 <div class="space-y-2">
                   <label class="block text-sm font-medium text-gray-700 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[#012928]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2m-6-6h.01M6 20h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     Property Address
                   </label>
                   <GooglePlacesAutocomplete
                     v-model="propertyAddress"
-                    :api-key="googleMapsApiKey"
-                    placeholder="Ex: 123 Main St, Miami, FL 33101"
+                    :placeholder="'Digite o endereço do imóvel'"
                     @place-selected="handlePlaceSelected"
+                    apiKey="AIzaSyDRYhkASG4k8H3xwYq0bh-JdBMPM-9-pRs"
                   />
                 </div>
                 
@@ -448,7 +455,7 @@
                 <div class="space-y-2">
                   <label class="block text-sm font-medium text-gray-700 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[#012928]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
                     MLS ID
                   </label>
@@ -500,7 +507,7 @@
                 <div class="space-y-2">
                   <label class="block text-sm font-medium text-gray-700 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[#012928]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2m-6 0h6" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2m-6-6h.01M6 20h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     HOA Fees (USD)
                   </label>
@@ -691,7 +698,7 @@
               <button 
                 type="submit" 
                 :disabled="!isFormValid || isSubmitting"
-                class="px-4 py-2 text-sm font-medium text-white bg-[#012928] border border-transparent rounded-md shadow-sm hover:bg-[#012928]/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#012928] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                class="px-4 py-2 text-sm font-medium text-white bg-[#451A37] border border-transparent rounded-md shadow-sm hover:bg-[#012928]/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#012928] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 Publish
               </button>
@@ -728,13 +735,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue';
-import { useInstaHubStore } from '@/stores/instaHubStore';
-import { useAuthStore } from '@/stores/auth';
-import GooglePlacesAutocomplete from '@/components/common/GooglePlacesAutocomplete.vue';
-import { googleMapsConfig } from '@/config/googleMaps';
-
-const googleMapsApiKey = googleMapsConfig.apiKey;
+import { ref, computed, onMounted } from 'vue';
+import { useInstaHubStore } from '../../stores/instaHubStore';
+import { useAuthStore } from '../../stores/auth';
+import GooglePlacesAutocomplete from '../../components/common/GooglePlacesAutocomplete.vue';
 
 // Interface para arquivos selecionados
 interface SelectedFile {
@@ -764,6 +768,7 @@ const coverPhotoInput = ref<HTMLInputElement | null>(null);
 
 // Estado do formulário
 const selectedFiles = ref<Array<SelectedFile>>([]);
+const mediaFiles = ref<Array<SelectedFile>>([]);
 const currentMediaIndex = ref(0);
 const caption = ref('');
 const propertyAddress = ref('');
@@ -771,7 +776,7 @@ const propertyType = ref('');
 const propertyStatus = ref('Active');
 const timeOnMarket = ref('');
 const mlsId = ref('');
-const commissionPercentage = ref('');
+const commissionPercentage = ref<number | null>(null);
 const bedrooms = ref(0);
 const bathrooms = ref(0);
 const garageSpaces = ref(0);
@@ -796,6 +801,7 @@ const availableCategories = ref([
 const propertyPrice = ref('');
 const formattedPropertyPrice = ref('');
 const coverPhoto = ref<SelectedFile | null>(null);
+const uploadProgress = ref(0);
 
 // Emojis comuns
 const commonEmojis = ['😊', '👍', '🎉', '🏠', '🔑', '💰', '🏢', '🌆', '🌇', '🌅', '🌄', '🏘️', '🏙️', '🏗️', '🏡', '🏚️'];
@@ -812,270 +818,100 @@ const isFormValid = computed(() => {
   return selectedFiles.value.length > 0 && postCategory.value !== '';
 });
 
-// Função para abrir o seletor de arquivos
-const openFilePicker = () => {
-  fileInput.value?.click();
-};
-
-// Função para lidar com a seleção de arquivos
-const handleFileSelect = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  if (!target.files || target.files.length === 0) return;
+// Função para validar o post de acordo com as regras de qualidade
+const validatePostQuality = (): { valid: boolean; errors: string[] } => {
+  const errors: string[] = [];
   
-  const files = Array.from(target.files);
+  // Verificar se as configurações de qualidade estão disponíveis
+  // if (!contentQuality.value) {
+  //   return { valid: true, errors: [] };
+  // }
   
-  // Limitar a 5 arquivos
-  const totalFiles = selectedFiles.value.length + files.length;
-  if (totalFiles > 5) {
-    alert('You can add up to 5 files.');
-    return;
+  // Comentando variáveis não utilizadas
+  // const hasVideo = selectedFiles.value.some(file => file.type === 'video');
+  // const totalImages = selectedFiles.value.length + (coverPhoto.value ? 1 : 0);
+  
+  // Se não tiver vídeo, verificar o número mínimo de fotos
+  // if (!hasVideo && totalImages < contentQuality.value.minPhotos) {
+  //   errors.push(`É necessário adicionar pelo menos ${contentQuality.value.minPhotos} fotos ou um vídeo.`);
+  // }
+  
+  // Verificar campos obrigatórios para posts de imóveis
+  if (postCategory.value === 'Imóveis à Venda' || postCategory.value === 'Imóveis para Alugar') {
+    // const requiredFields = contentQuality.value.requiredFields || [];
+    
+    // if (requiredFields.includes('price') && !propertyPrice.value) {
+    //   errors.push('O preço do imóvel é obrigatório.');
+    // }
+    
+    // if (requiredFields.includes('address') && !propertyAddress.value) {
+    //   errors.push('O endereço do imóvel é obrigatório.');
+    // }
+    
+    // if (requiredFields.includes('description') && (!caption.value || caption.value.length < 50)) {
+    //   errors.push('A descrição do imóvel deve ter pelo menos 50 caracteres.');
+    // }
+    
+    // if (requiredFields.includes('bedrooms') && !bedrooms.value) {
+    //   errors.push('O número de quartos é obrigatório.');
+    // }
+    
+    // if (requiredFields.includes('bathrooms') && !bathrooms.value) {
+    //   errors.push('O número de banheiros é obrigatório.');
+    // }
+    
+    // if (requiredFields.includes('squareFootage') && !squareFootage.value) {
+    //   errors.push('A área do imóvel é obrigatória.');
+    // }
   }
   
-  files.forEach((file) => {
-    // Verificar se o arquivo é uma imagem ou vídeo
-    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
-      alert('Please select only images or videos.');
-      return;
-    }
+  // Verificar palavras-chave proibidas
+  // const bannedKeywords = contentQuality.value.bannedKeywords || [];
+  // if (bannedKeywords.length > 0 && caption.value) {
+  //   const lowerCaption = caption.value.toLowerCase();
+  //   const foundBannedWords = bannedKeywords.filter(word => 
+  //     lowerCaption.includes(word.toLowerCase())
+  //   );
     
-    // Verificar o tamanho do arquivo (limite de 50MB)
-    const maxSize = 50 * 1024 * 1024; // 50MB em bytes
-    if (file.size > maxSize) {
-      alert(`The file ${file.name} exceeds the 50MB limit.`);
-      return;
-    }
-    
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const preview = e.target?.result as string;
-      const isVideo = file.type.startsWith('video/');
-      
-      console.log(`Processing file: ${file.name}, type: ${file.type}, is video: ${isVideo}`);
-      
-      // Adicionar o arquivo à lista de arquivos selecionados
-      selectedFiles.value.push({
-        id: Date.now() + Math.random(), // Garantir ID único
-        file: file,
-        preview: preview,
-        type: isVideo ? 'video' : 'image',
-        fileName: file.name
-      });
-      
-      // Atualizar o índice para mostrar o arquivo recém-adicionado
-      currentMediaIndex.value = selectedFiles.value.length - 1;
-      
-      // Pausar qualquer vídeo em reprodução
-      pauseCurrentVideo();
-    };
-    
-    reader.onerror = (error) => {
-      console.error('Error reading file:', error);
-    };
-    
-    // Ler o arquivo como URL de dados
-    reader.readAsDataURL(file);
-  });
+  //   if (foundBannedWords.length > 0) {
+  //     errors.push(`O texto contém palavras proibidas: ${foundBannedWords.join(', ')}`);
+  //   }
+  // }
   
-  // Limpar o input para permitir selecionar o mesmo arquivo novamente
-  target.value = '';
-};
-
-// Funções para navegação entre mídias
-const prevMedia = () => {
-  if (selectedFiles.value.length <= 1) return;
-  
-  // Pausar vídeo atual se estiver sendo exibido
-  pauseCurrentVideo();
-  
-  currentMediaIndex.value = (currentMediaIndex.value - 1 + selectedFiles.value.length) % selectedFiles.value.length;
-};
-
-const nextMedia = () => {
-  if (selectedFiles.value.length <= 1) return;
-  
-  // Pausar vídeo atual se estiver sendo exibido
-  pauseCurrentVideo();
-  
-  currentMediaIndex.value = (currentMediaIndex.value + 1) % selectedFiles.value.length;
-};
-
-// Função para pausar o vídeo atual
-const pauseCurrentVideo = () => {
-  // Encontrar todos os vídeos na página
-  const videos = document.querySelectorAll('video');
-  
-  // Pausar cada vídeo
-  videos.forEach(video => {
-    if (!video.paused) {
-      video.pause();
-    }
-  });
-};
-
-// Função para remover um arquivo
-const removeFile = (id: number) => {
-  selectedFiles.value = selectedFiles.value.filter(file => file.id !== id);
-  if (selectedFiles.value.length === 0) {
-    currentMediaIndex.value = 0;
-  } else if (currentMediaIndex.value >= selectedFiles.value.length) {
-    currentMediaIndex.value = selectedFiles.value.length - 1;
-  }
-};
-
-// Função para limpar todos os arquivos
-const clearAllFiles = () => {
-  selectedFiles.value = [];
-  currentMediaIndex.value = 0;
-};
-
-// Função para abrir o seletor de foto de capa
-const openCoverPhotoPicker = () => {
-  coverPhotoInput.value?.click();
-};
-
-// Função para lidar com a seleção da foto de capa
-const handleCoverPhotoSelect = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  if (!target.files || target.files.length === 0) return;
-  
-  const file = target.files[0];
-  
-  // Verificar se o arquivo é uma imagem
-  if (!file.type.startsWith('image/')) {
-    alert('Please select only images.');
-    return;
-  }
-  
-  // Verificar o tamanho do arquivo (limite de 10MB)
-  const maxSize = 10 * 1024 * 1024; // 10MB em bytes
-  if (file.size > maxSize) {
-    alert(`The file ${file.name} exceeds the 10MB limit.`);
-    return;
-  }
-  
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const preview = e.target?.result as string;
-    
-    console.log(`Processing file: ${file.name}, type: ${file.type}`);
-    
-    // Adicionar o arquivo à lista de arquivos selecionados
-    coverPhoto.value = {
-      id: Date.now() + Math.random(), // Garantir ID único
-      file: file,
-      preview: preview,
-      type: 'image',
-      fileName: file.name
-    };
+  return {
+    valid: errors.length === 0,
+    errors
   };
-  
-  reader.onerror = (error) => {
-    console.error('Error reading file:', error);
-  };
-  
-  // Ler o arquivo como URL de dados
-  reader.readAsDataURL(file);
-  
-  // Limpar o input para permitir selecionar o mesmo arquivo novamente
-  target.value = '';
 };
 
-// Função para remover a foto de capa
-const removeCoverPhoto = () => {
-  coverPhoto.value = null;
-};
-
-// Função para alternar o seletor de emojis
-const toggleEmojiPicker = () => {
-  showEmojiPicker.value = !showEmojiPicker.value;
-};
-
-// Função para adicionar um emoji à legenda
-const addEmoji = (emoji: string) => {
-  caption.value += emoji;
-};
-
-// Função para fechar o modal
-const closeModal = () => {
-  emit('close');
-  emit('update:modelValue', false);
-  resetForm();
-};
-
-// Função para resetar o formulário
-const resetForm = () => {
-  selectedFiles.value = [];
-  caption.value = '';
-  propertyAddress.value = '';
-  propertyType.value = '';
-  propertyStatus.value = 'Active';
-  timeOnMarket.value = '';
-  mlsId.value = '';
-  commissionPercentage.value = '';
-  bedrooms.value = 0;
-  bathrooms.value = 0;
-  garageSpaces.value = 0;
-  squareFootage.value = '';
-  hoaFees.value = '';
-  observations.value = '';
-  hasPool.value = false;
-  hasGarden.value = false;
-  hasAirConditioning.value = false;
-  hasSecurity.value = false;
-  showEmojiPicker.value = false;
-  currentMediaIndex.value = 0;
-  postCategory.value = '';
-  propertyPrice.value = '';
-  formattedPropertyPrice.value = '';
-  coverPhoto.value = null;
-};
-
-// Função para enviar o formulário
+// Função para lidar com o envio do formulário
 const handleSubmit = async () => {
-  if (!isFormValid.value) {
+  if (!postCategory.value) {
+    alert('Por favor, selecione uma categoria para o post');
     return;
   }
-  
+
+  if (!coverPhoto.value) {
+    alert('Por favor, adicione uma foto de capa para o post');
+    return;
+  }
+
+  if (selectedFiles.value.length === 0) {
+    alert('Por favor, adicione pelo menos uma mídia ao post');
+    return;
+  }
+
   try {
-    // Verificar se há foto de capa
-    if (!coverPhoto.value) {
-      alert('Please select a cover photo for the post.');
-      return;
-    }
-    
-    // Preparar os arquivos de mídia para upload, colocando a foto de capa como primeiro item
-    const allMediaFiles = [];
-    
-    // Adicionar a foto de capa como primeiro item
-    allMediaFiles.push({
-      file: coverPhoto.value.file,
-      type: 'image',
-      isCoverPhoto: true // Marcar como foto de capa
-    });
-    
-    // Adicionar as demais mídias
-    const additionalMedia = selectedFiles.value.map(file => ({
-      file: file.file,
-      type: file.type,
-      isCoverPhoto: false
-    }));
-    
-    const mediaFilesToUpload = [...allMediaFiles, ...additionalMedia];
-    
-    // Iniciar o processo de submissão
     isSubmitting.value = true;
     
-    console.log('Sending post with category:', postCategory.value);
-    console.log('Cover photo:', coverPhoto.value.fileName);
-    console.log('Total media files:', mediaFilesToUpload.length);
-    console.log('Media types:', mediaFilesToUpload.map(m => m.type).join(', '));
+    // Iniciar simulação de progresso
+    const progressInterval = simulateUploadProgress();
     
-    // Upload das mídias e criação do post usando a store
-    await instaHubStore.createPost(
-      caption.value,
-      mediaFilesToUpload,
-      postCategory.value,
-      {
+    // Preparar os dados do post
+    const postData = {
+      caption: caption.value,
+      category: postCategory.value,
+      propertyInfo: {
         address: propertyAddress.value,
         type: propertyType.value,
         status: propertyStatus.value,
@@ -1086,40 +922,81 @@ const handleSubmit = async () => {
           bedrooms: bedrooms.value,
           bathrooms: bathrooms.value,
           garageSpaces: garageSpaces.value,
-          squareFootage: squareFootage.value.toString(), // Convertendo para string conforme a interface
+          squareFootage: squareFootage.value,
           hasPool: hasPool.value,
           hasGarden: hasGarden.value,
           hasAirConditioning: hasAirConditioning.value,
           hasSecurity: hasSecurity.value
         },
         hoaFees: hoaFees.value,
-        commissionPercentage: parseFloat(commissionPercentage.value) || 0,
+        commissionPercentage: commissionPercentage.value,
         observations: observations.value,
-        // Adicionar dados de geolocalização se disponíveis
         location: selectedPlace.value ? {
-          lat: selectedPlace.value.geometry?.location?.lat(),
-          lng: selectedPlace.value.geometry?.location?.lng(),
-          formattedAddress: selectedPlace.value.formatted_address,
-          placeId: selectedPlace.value.place_id
+          formattedAddress: selectedPlace.value.formatted_address || '',
+          placeId: selectedPlace.value.place_id || '',
+          coordinates: selectedPlace.value.geometry?.location ? {
+            lat: selectedPlace.value.geometry.location.lat(),
+            lng: selectedPlace.value.geometry.location.lng()
+          } : null
         } : null
-      },
-      {
-        name: authStore.user?.displayName || 'User',
-        role: authStore.userRole || 'Real Estate Agent'
+      }
+    };
+    
+    // Enviar os dados para o serviço
+    await instaHubStore.createPost(
+      caption.value,                // caption (string)
+      [                             // mediaFiles (array de MediaUpload)
+        ...(coverPhoto.value ? [coverPhoto.value] : []),
+        ...selectedFiles.value
+      ],
+      postCategory.value,           // category (string)
+      {                             // propertyInfo (objeto PropertyInfo)
+        address: propertyAddress.value,
+        type: propertyType.value,
+        status: propertyStatus.value,
+        timeOnMarket: timeOnMarket.value,
+        mlsId: mlsId.value,
+        price: propertyPrice.value,
+        features: {
+          bedrooms: bedrooms.value,
+          bathrooms: bathrooms.value,
+          garageSpaces: garageSpaces.value,
+          squareFootage: squareFootage.value,
+          hasPool: hasPool.value,
+          hasGarden: hasGarden.value,
+          hasAirConditioning: hasAirConditioning.value,
+          hasSecurity: hasSecurity.value
+        },
+        hoaFees: hoaFees.value,
+        commissionPercentage: commissionPercentage.value,
+        observations: observations.value,
+        location: selectedPlace.value ? {
+          formattedAddress: selectedPlace.value.formatted_address || '',
+          placeId: selectedPlace.value.place_id || '',
+          coordinates: selectedPlace.value.geometry?.location ? {
+            lat: selectedPlace.value.geometry.location.lat(),
+            lng: selectedPlace.value.geometry.location.lng()
+          } : null
+        } : null
       }
     );
     
-    // Fechar o modal de criação e mostrar o modal de sucesso
-    emit('update:modelValue', false);
-    showSuccessModal.value = true;
+    // Finalizar o progresso
+    uploadProgress.value = 100;
+    clearInterval(progressInterval);
     
-    // Resetar o formulário
-    resetForm();
+    // Fechar o modal e resetar o formulário
+    setTimeout(() => {
+      emit('update:modelValue', false);
+      resetForm();
+      isSubmitting.value = false;
+    }, 1000);
+    
   } catch (error) {
-    console.error('Error creating post:', error);
-    alert(`Error creating the post: ${error instanceof Error ? error.message : 'Try again later.'}`);
-  } finally {
+    console.error('Erro ao criar post:', error);
+    alert('Ocorreu um erro ao criar o post. Por favor, tente novamente.');
     isSubmitting.value = false;
+    uploadProgress.value = 0;
   }
 };
 
@@ -1169,10 +1046,160 @@ onMounted(() => {
   document.addEventListener('mousedown', handleClickOutside);
 });
 
-onBeforeUnmount(() => {
-  document.removeEventListener('mousedown', handleClickOutside);
-  resetForm();
-});
+// Função para resetar o formulário
+const resetForm = () => {
+  selectedFiles.value = [];
+  mediaFiles.value = [];
+  caption.value = '';
+  propertyAddress.value = '';
+  propertyType.value = '';
+  propertyStatus.value = 'Active';
+  timeOnMarket.value = '';
+  mlsId.value = '';
+  commissionPercentage.value = null;
+  bedrooms.value = 0;
+  bathrooms.value = 0;
+  garageSpaces.value = 0;
+  squareFootage.value = '';
+  hoaFees.value = '';
+  observations.value = '';
+  hasPool.value = false;
+  hasGarden.value = false;
+  hasAirConditioning.value = false;
+  hasSecurity.value = false;
+  showEmojiPicker.value = false;
+  currentMediaIndex.value = 0;
+  postCategory.value = '';
+  propertyPrice.value = '';
+  formattedPropertyPrice.value = '';
+  coverPhoto.value = null;
+  selectedPlace.value = null;
+  uploadProgress.value = 0;
+};
+
+// Funções para manipulação de arquivos
+const openFilePicker = () => {
+  const fileInput = document.getElementById('file-input') as HTMLInputElement;
+  fileInput?.click();
+};
+
+const openCoverPhotoPicker = () => {
+  const coverPhotoInput = document.getElementById('cover-photo-input') as HTMLInputElement;
+  coverPhotoInput?.click();
+};
+
+const handleFileSelect = (event: Event) => {
+  const files = (event.target as HTMLInputElement).files;
+  if (!files) return;
+  
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    if (selectedFiles.value.length >= 5) {
+      alert('Máximo de 5 arquivos permitidos');
+      break;
+    }
+    
+    if (file.size > 50 * 1024 * 1024) {
+      alert(`O arquivo ${file.name} excede o limite de 50MB`);
+      continue;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const preview = e.target?.result as string;
+      selectedFiles.value.push({
+        id: Date.now() + i,
+        file,
+        preview,
+        type: file.type.startsWith('video/') ? 'video' : 'image'
+      });
+    };
+    reader.readAsDataURL(file);
+  }
+};
+
+const handleCoverPhotoSelect = (event: Event) => {
+  const files = (event.target as HTMLInputElement).files;
+  if (!files || files.length === 0) return;
+  
+  const file = files[0];
+  if (file.size > 10 * 1024 * 1024) {
+    alert(`O arquivo ${file.name} excede o limite de 10MB`);
+    return;
+  }
+  
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const preview = e.target?.result as string;
+    coverPhoto.value = {
+      id: Date.now(),
+      file,
+      preview,
+      type: file.type.startsWith('video/') ? 'video' : 'image'
+    };
+  };
+  reader.readAsDataURL(file);
+};
+
+const removeFile = (index: number) => {
+  selectedFiles.value.splice(index, 1);
+  if (currentMediaIndex.value >= selectedFiles.value.length) {
+    currentMediaIndex.value = Math.max(0, selectedFiles.value.length - 1);
+  }
+};
+
+const removeCoverPhoto = () => {
+  coverPhoto.value = null;
+};
+
+const clearAllFiles = () => {
+  selectedFiles.value = [];
+  currentMediaIndex.value = 0;
+};
+
+const prevMedia = () => {
+  if (currentMediaIndex.value > 0) {
+    pauseCurrentVideo();
+    currentMediaIndex.value--;
+  }
+};
+
+const nextMedia = () => {
+  if (currentMediaIndex.value < selectedFiles.value.length - 1) {
+    pauseCurrentVideo();
+    currentMediaIndex.value++;
+  }
+};
+
+const pauseCurrentVideo = () => {
+  const currentVideo = document.querySelector('.media-preview video') as HTMLVideoElement;
+  if (currentVideo) {
+    currentVideo.pause();
+  }
+};
+
+// Funções para emojis
+const toggleEmojiPicker = () => {
+  showEmojiPicker.value = !showEmojiPicker.value;
+};
+
+const addEmoji = (emoji: any) => {
+  caption.value += emoji.i;
+  showEmojiPicker.value = false;
+};
+
+// Função para simular o progresso do upload
+const simulateUploadProgress = () => {
+  uploadProgress.value = 0;
+  const interval = setInterval(() => {
+    if (uploadProgress.value < 90) {
+      uploadProgress.value += Math.floor(Math.random() * 10) + 1;
+    } else {
+      clearInterval(interval);
+    }
+  }, 300);
+  return interval;
+};
 </script>
 
 <style scoped>

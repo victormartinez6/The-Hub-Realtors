@@ -1,0 +1,32 @@
+/* Estilos para garantir que os controles de vídeo sejam clicáveis */
+video {
+  z-index: 10 !important;
+  position: relative !important;
+  pointer-events: auto !important;
+}
+
+video::-webkit-media-controls {
+  z-index: 20 !important;
+  position: relative !important;
+  pointer-events: auto !important;
+}
+
+video::-webkit-media-controls-panel {
+  z-index: 30 !important;
+  pointer-events: auto !important;
+}
+
+video::-webkit-media-controls-play-button,
+video::-webkit-media-controls-volume-slider,
+video::-webkit-media-controls-mute-button,
+video::-webkit-media-controls-fullscreen-button {
+  cursor: pointer !important;
+  z-index: 40 !important;
+  pointer-events: auto !important;
+}
+
+.video-container {
+  position: relative;
+  z-index: 5;
+  pointer-events: auto !important;
+}

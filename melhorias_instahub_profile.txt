@@ -1,0 +1,119 @@
+### Melhorias para a página de perfil do InstaHub
+
+## 1. Adicionar estatísticas de engajamento no modal de post
+
+Adicione este código logo após a seção de detalhes do imóvel (linha ~625):
+
+```vue
+<!-- Estatísticas de Engajamento -->
+<div class="flex flex-wrap gap-6 mt-6 p-4 bg-gray-50 rounded-lg">
+  <div class="flex items-center">
+    <i class="fas fa-heart text-red-500 text-xl mr-2"></i>
+    <div>
+      <div class="text-sm text-gray-500">Curtidas</div>
+      <div class="font-semibold">{{ selectedPost.likes || 0 }}</div>
+    </div>
+  </div>
+  
+  <div class="flex items-center">
+    <i class="fas fa-comment text-blue-500 text-xl mr-2"></i>
+    <div>
+      <div class="text-sm text-gray-500">Comentários</div>
+      <div class="font-semibold">{{ selectedPost.comments?.length || 0 }}</div>
+    </div>
+  </div>
+  
+  <div class="flex items-center">
+    <i class="fas fa-eye text-purple-500 text-xl mr-2"></i>
+    <div>
+      <div class="text-sm text-gray-500">Visualizações</div>
+      <div class="font-semibold">{{ selectedPost.views || 0 }}</div>
+    </div>
+  </div>
+  
+  <div class="flex items-center">
+    <i class="fas fa-dollar-sign text-green-500 text-xl mr-2"></i>
+    <div>
+      <div class="text-sm text-gray-500">Interesses</div>
+      <div class="font-semibold">{{ selectedPost.interesseCount || 0 }}</div>
+    </div>
+  </div>
+</div>
+```
+
+## 2. Adicionar seção de comentários no modal de post
+
+Adicione este código logo após a seção de estatísticas de engajamento:
+
+```vue
+<!-- Comentários -->
+<div v-if="selectedPost.comments && selectedPost.comments.length > 0" class="mt-6 border-t border-gray-200 pt-6">
+  <h3 class="text-lg font-bold text-gray-800 mb-4">Comentários ({{ selectedPost.comments.length }})</h3>
+  <div class="space-y-4">
+    <div v-for="(comment, index) in selectedPost.comments" :key="index" class="bg-gray-50 rounded-lg p-4">
+      <div class="flex items-start">
+        <img :src="sanitizeUrl(comment.userAvatar)" alt="Avatar" class="w-10 h-10 rounded-full object-cover mr-3" />
+        <div class="flex-1">
+          <div class="flex justify-between items-center mb-1">
+            <div class="font-medium text-gray-800">{{ comment.userName }}</div>
+            <div class="text-xs text-gray-500">{{ comment.createdAt ? new Date(comment.createdAt.seconds * 1000).toLocaleDateString('pt-BR', {day: '2-digit', month: 'short', year: 'numeric'}) : '' }}</div>
+          </div>
+          <p class="text-gray-700 text-sm">{{ comment.text }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+## 3. Adicionar botão para ver o post no feed
+
+Adicione este código na seção de botões de ação (linha ~629):
+
+```vue
+<button 
+  @click="goToPostInFeed(selectedPost.id)" 
+  class="bg-[#01FBA1] hover:bg-[#01FBA1]/90 text-[#012928] px-5 py-2 rounded-lg font-semibold shadow transition-colors flex items-center"
+>
+  <i class="fas fa-external-link-alt mr-2"></i>
+  Ver no Feed
+</button>
+```
+
+## 4. Adicionar função para navegar para o post no feed
+
+Adicione esta função no script (após a função closePostModal):
+
+```javascript
+function goToPostInFeed(postId: string) {
+  closePostModal();
+  window.location.href = `/instahub?postId=${postId}`;
+}
+```
+
+## 5. Melhorar o indicador de múltiplas imagens nos cards de posts
+
+Substitua o código do indicador de múltiplas imagens nos dois locais (posts do usuário e posts marcados como interesse) por:
+
+```vue
+<!-- Indicador de múltiplas imagens -->
+<div 
+  v-if="post.images && post.images.length > 1" 
+  class="absolute top-3 right-3 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded-full flex items-center"
+>
+  <i class="fas fa-images mr-1"></i> {{ post.images.length }}
+</div>
+```
+
+## 6. Adicionar indicador de clique para mais detalhes nos cards de posts
+
+Adicione este código logo após o indicador de múltiplas imagens nos dois locais (posts do usuário e posts marcados como interesse):
+
+```vue
+<!-- Indicador de clique para mais detalhes -->
+<div class="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
+  <div class="opacity-0 hover:opacity-100 transition-opacity duration-300 bg-[#01FBA1] text-[#012928] px-3 py-2 rounded-lg font-medium transform translate-y-4 hover:translate-y-0 transition-transform">
+    <i class="fas fa-search-plus mr-1"></i> Ver detalhes
+  </div>
+</div>
+```

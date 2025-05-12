@@ -4,9 +4,12 @@
       <v-row>
         <!-- Editor -->
         <v-col cols="6">
-          <v-card>
-            <v-card-title>Editor</v-card-title>
-            <v-card-text>
+          <v-card class="editor-card" elevation="3">
+            <v-card-title class="editor-title">
+              <v-icon class="mr-2">mdi-pencil-outline</v-icon>
+              Editor
+            </v-card-title>
+            <v-card-text class="editor-content">
               <v-text-field
                 v-model="templateName"
                 label="Nome do Template"
@@ -22,17 +25,21 @@
               <v-divider class="my-4"></v-divider>
 
               <div class="components-list">
-                <v-card-subtitle>Componentes Disponíveis</v-card-subtitle>
-                <div class="d-flex flex-wrap gap-2">
+                <div class="section-header">
+                  <v-icon color="#012928" class="mr-2">mdi-puzzle-outline</v-icon>
+                  <span class="section-title">Componentes Disponíveis</span>
+                </div>
+                <div class="component-buttons">
                   <v-btn
                     v-for="item in availableComponents"
                     :key="item.type"
                     variant="outlined"
-                    color="primary"
-                    class="mb-2 me-2"
+                    color="#012928"
+                    class="component-btn"
+                    elevation="2"
                     @click="addComponent(item)"
                   >
-                    <v-icon start>{{ item.icon }}</v-icon>
+                    <v-icon start color="#01FBA1">{{ item.icon }}</v-icon>
                     {{ item.type }}
                   </v-btn>
                 </div>
@@ -40,8 +47,24 @@
 
               <v-divider class="my-4"></v-divider>
 
+              <!-- Botão de Salvar -->
+              <v-btn
+                color="#012928"
+                block
+                class="save-btn mb-4"
+                @click="saveTemplate"
+                elevation="2"
+                size="large"
+              >
+                <v-icon start>mdi-content-save</v-icon>
+                Salvar Template
+              </v-btn>
+
               <div class="template-components">
-                <v-card-subtitle>Template</v-card-subtitle>
+                <div class="section-header">
+                  <v-icon color="#012928" class="mr-2">mdi-file-document-edit-outline</v-icon>
+                  <span class="section-title">Componentes do Template</span>
+                </div>
                 <draggable
                   v-model="templateComponents"
                   group="components"
@@ -194,6 +217,54 @@
                               </v-card-text>
                             </v-card>
                           </template>
+
+                          <template v-else-if="element.type === 'html'">
+                            <div class="mb-2">
+                              <div class="d-flex align-center mb-2">
+                                <v-icon color="info" class="me-2">mdi-robot</v-icon>
+                                <span class="text-subtitle-2">Conteúdo HTML gerado por IA</span>
+                              </div>
+                              <v-textarea
+                                v-model="element.content"
+                                label="Código HTML"
+                                :style="element.style"
+                                rows="6"
+                                auto-grow
+                                no-resize
+                                hide-details
+                                class="font-monospace"
+                              ></v-textarea>
+                            </div>
+                            <v-expansion-panels class="mt-2">
+                              <v-expansion-panel>
+                                <v-expansion-panel-title>Opções de Estilo</v-expansion-panel-title>
+                                <v-expansion-panel-text>
+                                  <v-row dense>
+                                    <v-col cols="6">
+                                      <v-select
+                                        v-model="element.style.fontSize"
+                                        label="Tamanho da Fonte"
+                                        :items="textStyleOptions.fontSize"
+                                        density="compact"
+                                      ></v-select>
+                                    </v-col>
+                                    <v-col cols="6">
+                                      <v-select
+                                        v-model="element.style.lineHeight"
+                                        label="Altura da Linha"
+                                        :items="textStyleOptions.lineHeight"
+                                        density="compact"
+                                      ></v-select>
+                                    </v-col>
+                                  </v-row>
+                                </v-expansion-panel-text>
+                              </v-expansion-panel>
+                            </v-expansion-panels>
+                          </template>
+
+                          <template v-else-if="element.type === 'spacer'">
+                            <div class="spacer" :style="{ height: element.size + 'px' }"></div>
+                          </template>
                         </div>
                         <v-btn
                           icon="mdi-delete"
@@ -221,17 +292,22 @@
           </v-card>
         </v-col>
 
-        <!-- Pré-visualização -->
+        <!-- Visualização -->
         <v-col cols="6">
-          <v-card class="preview-card">
-            <v-card-title>Pré-visualização</v-card-title>
-            <v-card-text>
+          <v-card class="preview-card" elevation="3">
+            <v-card-title class="preview-title">
+              <v-icon class="mr-2">mdi-eye-outline</v-icon>
+              Visualização
+            </v-card-title>
+            <v-card-text class="preview-content-wrapper">
               <div class="preview-content">
-                <div v-for="(element, index) in templateComponents" :key="index" class="preview-item">
+                <h2 class="text-h5 mb-4">{{ templateName || 'Sem título' }}</h2>
+                <div v-for="(element, index) in templateComponents" :key="element.id || index" class="preview-item">
                   <!-- Texto -->
-                  <template v-if="element.type === 'text'">
-                    <p class="text-content" :style="element.style">{{ element.content }}</p>
-                  </template>
+                  <p v-if="element.type === 'text'" :style="element.style" class="text-content">{{ element.content }}</p>
+                  
+                  <!-- HTML (renderizado) -->
+                  <div v-else-if="element.type === 'html'" :style="element.style" v-html="element.content" class="html-content"></div>
                   
                   <!-- Título -->
                   <div v-else-if="element.type === 'title'" class="text-h5 font-weight-bold mb-4">
@@ -307,6 +383,11 @@ const availableComponents = ref([
     type: 'text',
     icon: 'mdi-text',
     placeholder: 'Digite seu texto aqui'
+  },
+  {
+    type: 'html',
+    icon: 'mdi-code-tags',
+    placeholder: 'HTML'
   },
   {
     type: 'title',
@@ -393,6 +474,11 @@ const addComponent = (component: any) => {
     ];
   } else if (component.type === 'spacer') {
     newComponent.size = 20;
+  } else if (component.type === 'html') {
+    newComponent.style = {
+      fontSize: '16px',
+      lineHeight: '1.6'
+    };
   }
 
   console.log('Adicionando novo componente:', newComponent);
@@ -467,93 +553,243 @@ const removeImage = (element: any) => {
 
 // Função para salvar o template
 const saveTemplate = async () => {
+  console.log('Função saveTemplate chamada');
+  
   if (!templateName.value) {
     alert('Por favor, insira um nome para o template.');
     return;
   }
 
-  const template = {
-    name: templateName.value,
-    description: templateDescription.value,
-    components: templateComponents.value.map(component => ({
-      ...component,
-      id: component.id || uuidv4() // Garante que todos os componentes tenham um ID
-    }))
-  };
+  try {
+    // Criar objeto do template
+    const template = {
+      name: templateName.value,
+      description: templateDescription.value,
+      
+      // Garantir que a estrutura dos componentes seja preservada corretamente
+      components: templateComponents.value.map(component => {
+        // Criar uma cópia limpa do componente para evitar problemas de serialização
+        const cleanComponent = { ...component };
+        
+        // Remover propriedades que podem causar problemas
+        if (cleanComponent._dragging !== undefined) delete cleanComponent._dragging;
+        if (cleanComponent._sortable !== undefined) delete cleanComponent._sortable;
+        
+        // Garantir que o componente tenha um ID
+        if (!cleanComponent.id) cleanComponent.id = uuidv4();
+        
+        return cleanComponent;
+      }),
+      
+      // Preservar outros campos importantes
+      mlsId: props.initialTemplate?.mlsId || '',
+      createdAt: props.initialTemplate?.createdAt || new Date(),
+      
+      // Se for uma edição, preservar o ID original
+      id: props.initialTemplate?.id
+    };
 
-  console.log('Salvando template:', template);
-  emit('save', template);
+    console.log('Salvando template:', template);
+    
+    // Mostrar mensagem de carregamento
+    const saveMessage = document.createElement('div');
+    saveMessage.textContent = 'Salvando template...';
+    saveMessage.style.position = 'fixed';
+    saveMessage.style.top = '20px';
+    saveMessage.style.right = '20px';
+    saveMessage.style.padding = '10px 20px';
+    saveMessage.style.backgroundColor = '#012928';
+    saveMessage.style.color = 'white';
+    saveMessage.style.borderRadius = '4px';
+    saveMessage.style.zIndex = '9999';
+    document.body.appendChild(saveMessage);
+    
+    // Emitir evento para o componente pai
+    emit('save', template);
+    
+    // Remover mensagem após 2 segundos
+    setTimeout(() => {
+      document.body.removeChild(saveMessage);
+      
+      // Mostrar mensagem de sucesso
+      const successMessage = document.createElement('div');
+      successMessage.textContent = 'Template salvo com sucesso!';
+      successMessage.style.position = 'fixed';
+      successMessage.style.top = '20px';
+      successMessage.style.right = '20px';
+      successMessage.style.padding = '10px 20px';
+      successMessage.style.backgroundColor = '#4CAF50';
+      successMessage.style.color = 'white';
+      successMessage.style.borderRadius = '4px';
+      successMessage.style.zIndex = '9999';
+      document.body.appendChild(successMessage);
+      
+      // Remover mensagem de sucesso após 3 segundos
+      setTimeout(() => {
+        document.body.removeChild(successMessage);
+      }, 3000);
+    }, 2000);
+  } catch (error) {
+    console.error('Erro ao salvar template:', error);
+    alert('Erro ao salvar template. Por favor, tente novamente.');
+  }
 };
 </script>
 
 <style scoped>
+/* Estilos gerais do editor */
 .email-template-editor {
-  padding: 16px;
+  padding: 1.5rem;
+  background-color: #f8f9fa;
+  min-height: 100vh;
 }
 
-.components-list {
-  margin-bottom: 16px;
+/* Estilos dos cards */
+.editor-card, .preview-card {
+  border-radius: 12px !important;
+  overflow: hidden;
+  border: none !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+  height: 100%;
+}
+
+.editor-title, .preview-title {
+  background-color: #012928 !important;
+  color: white !important;
+  padding: 1rem 1.5rem;
+  font-size: 1.2rem;
+  font-weight: 500;
+  border-bottom: 2px solid #01FBA1;
+}
+
+.editor-content {
+  padding: 1.5rem;
+  background-color: #f8f9fa;
+  overflow-y: auto;
+  max-height: calc(100vh - 200px);
+}
+
+/* Seções de componentes */
+.section-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(1, 41, 40, 0.1);
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #012928;
+}
+
+/* Botões de componentes */
+.component-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.component-btn {
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(1, 41, 40, 0.2) !important;
+  background-color: rgba(1, 41, 40, 0.05) !important;
+}
+
+.component-btn:hover {
+  transform: translateY(-2px);
+  background-color: rgba(1, 41, 40, 0.1) !important;
+  box-shadow: 0 4px 8px rgba(1, 41, 40, 0.15) !important;
+}
+
+/* Lista de componentes do template */
+.template-components {
+  margin-top: 1.5rem;
 }
 
 .template-components-list {
   min-height: 100px;
-  border: 1px dashed #ccc;
-  border-radius: 4px;
-  padding: 8px;
-}
-
-.component-item {
-  padding: 8px;
-  margin-bottom: 8px;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
+  border: 1px dashed rgba(1, 41, 40, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
   background-color: white;
 }
 
-.preview-card {
-  height: 100%;
+.component-item {
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background-color: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.component-item:hover {
+  border-color: #01FBA1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Área de pré-visualização */
+.preview-content-wrapper {
+  padding: 1.5rem;
+  background-color: #f8f9fa;
   overflow-y: auto;
+  max-height: calc(100vh - 200px);
 }
 
 .preview-content {
   max-width: 600px;
   margin: 0 auto;
-  padding: 16px;
+  padding: 1.5rem;
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  border: 1px solid #eee;
 }
 
 .preview-item {
-  margin: 8px 0;
+  margin: 1rem 0;
+  animation: fadeIn 0.5s ease-out;
 }
 
+/* Estilos de imagem */
 .placeholder-image {
   width: 100%;
   height: 200px;
-  border: 2px dashed #ccc;
-  border-radius: 4px;
+  border: 2px dashed #01FBA1;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #666;
-  background: #f5f5f5;
+  color: #012928;
+  background: rgba(1, 251, 161, 0.05);
+  transition: all 0.3s ease;
+}
+
+.placeholder-image:hover {
+  background: rgba(1, 251, 161, 0.1);
 }
 
 .image-preview {
   position: relative;
-  margin: 8px 0;
-  border-radius: 4px;
+  margin: 1rem 0;
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   min-height: 200px;
   background: #f5f5f5;
+  border: 1px solid #eee;
 }
 
 .v-img {
   width: 100%;
   height: 100%;
   min-height: 200px;
+  object-fit: cover;
 }
 
 .image-actions {
@@ -561,40 +797,43 @@ const saveTemplate = async () => {
   top: 8px;
   right: 8px;
   background: rgba(255, 255, 255, 0.9);
-  border-radius: 4px;
-  padding: 4px;
+  border-radius: 8px;
+  padding: 8px;
   display: flex;
-  gap: 4px;
+  gap: 8px;
   z-index: 1;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 .image-upload {
   width: 100%;
 }
 
+/* Elementos de edição */
 .drag-handle {
   cursor: move;
+  color: #012928;
+  transition: all 0.2s ease;
 }
 
-.text-editor {
-  width: 100%;
+.drag-handle:hover {
+  color: #01FBA1;
+  transform: scale(1.2);
 }
 
-.button-editor {
-  width: 100%;
-}
-
-.social-editor {
+.text-editor, .button-editor, .social-editor {
   width: 100%;
 }
 
 .social-icon {
   font-size: 24px;
-  color: #666;
+  color: #012928;
+  transition: all 0.3s ease;
 }
 
 .social-icon:hover {
-  color: var(--v-primary-base);
+  color: #01FBA1;
+  transform: scale(1.2);
 }
 
 .white-space-pre {
@@ -604,5 +843,31 @@ const saveTemplate = async () => {
 .text-content {
   white-space: pre-wrap;
   margin: 0;
+}
+
+.html-content {
+  margin: 0;
+}
+
+/* Animações */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Botão de salvar */
+.save-btn {
+  background-color: #012928 !important;
+  color: white !important;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(1, 41, 40, 0.2) !important;
+  margin-top: 1.5rem;
+}
+
+.save-btn:hover {
+  background-color: #023e3d !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(1, 41, 40, 0.3) !important;
 }
 </style>

@@ -147,16 +147,12 @@
                 <h3 class="font-medium text-gray-800 mb-2">Características do Imóvel</h3>
                 <div class="grid grid-cols-2 gap-2">
                   <div v-if="post.propertyInfo.features.bedrooms !== undefined" class="flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                    </svg>
-                    <span>{{ post.propertyInfo.features.bedrooms }} Quartos</span>
+                    <span class="font-semibold text-gray-700">Bed:</span>
+                    <span>{{ post.propertyInfo.features.bedrooms }}</span>
                   </div>
                   <div v-if="post.propertyInfo.features.bathrooms !== undefined" class="flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span>{{ post.propertyInfo.features.bathrooms }} Banheiros</span>
+                    <span class="font-semibold text-gray-700">Bath:</span>
+                    <span>{{ post.propertyInfo.features.bathrooms }}</span>
                   </div>
                   <div v-if="post.propertyInfo.features.area !== undefined" class="flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -164,11 +160,17 @@
                     </svg>
                     <span>{{ post.propertyInfo.features.area }}m²</span>
                   </div>
-                  <div v-if="post.propertyInfo.features.garage !== undefined" class="flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h-3m-6 0h-3m6 0V7m3 14V7" />
-                    </svg>
-                    <span>{{ post.propertyInfo.features.garage }} Vagas</span>
+                  <div v-if="post.propertyInfo.address" class="flex items-center gap-2">
+                    <a :href="`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(post.propertyInfo.address)}`" 
+                       target="_blank" 
+                       title="Ver no Google Maps"
+                       class="text-blue-500 hover:text-blue-700 transition-colors flex items-center gap-1">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <span>Ver no mapa</span>
+                    </a>
                   </div>
                 </div>
               </div>
