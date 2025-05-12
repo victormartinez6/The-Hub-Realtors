@@ -1,10 +1,8 @@
 import axios from 'axios';
 import { logger } from '../utils/logger';
 import { useAuthStore } from '../stores/auth';
-
-// Usar a variável de ambiente para a API key do OpenAI
-// Observação: Em produção, isso deve vir de uma variável de ambiente no servidor
-const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
+import { db } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 // URL base da API
 const API_URL = 'https://api.openai.com/v1/chat/completions';
@@ -12,7 +10,47 @@ const API_URL = 'https://api.openai.com/v1/chat/completions';
 // Largura fixa para todos os templates de email marketing
 const EMAIL_WIDTH = 600;
 
+// Coleção do Firestore para configurações do sistema
+const SYSTEM_SETTINGS_COLLECTION = 'system_settings';
+const API_KEYS_DOC = 'api_keys';
+
 class OpenAIService {
+  /**
+   * Busca a chave da API do OpenAI
+   * Tenta buscar da variável de ambiente primeiro, depois do Firestore
+   * @returns A chave da API ou null se não encontrada
+   */
+  private async getOpenAIApiKey(): Promise<string | null> {
+    try {
+      // Primeiro, tentar obter da variável de ambiente
+      const envApiKey = import.meta.env.VITE_OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
+      if (envApiKey) {
+        logger.debug('OpenAIService: Usando API key do OpenAI das variáveis de ambiente');
+        return envApiKey;
+      }
+      
+      // Se não encontrou nas variáveis de ambiente, buscar do Firestore
+      logger.debug('OpenAIService: Buscando API key do OpenAI do Firestore');
+      const apiKeysDocRef = doc(db, SYSTEM_SETTINGS_COLLECTION, API_KEYS_DOC);
+      const apiKeysDoc = await getDoc(apiKeysDocRef);
+      
+      if (apiKeysDoc.exists()) {
+        const data = apiKeysDoc.data();
+        if (data.openai) {
+          logger.debug('OpenAIService: API key do OpenAI encontrada no Firestore');
+          return data.openai;
+        }
+      }
+      
+      // Se chegou aqui, não encontrou a chave
+      logger.warn('OpenAIService: API key do OpenAI não encontrada');
+      return null;
+    } catch (error) {
+      logger.error('OpenAIService: Erro ao buscar API key do OpenAI:', error);
+      return null;
+    }
+  }
+  
   /**
    * Gera um template de email marketing personalizado usando a API do ChatGPT
    * @param postData Dados do post para gerar o template
@@ -20,9 +58,12 @@ class OpenAIService {
    */
   async generateEmailTemplate(postData: any): Promise<string> {
     try {
+      // Buscar a API key do OpenAI
+      const apiKey = await this.getOpenAIApiKey();
+      
       // Verificar se temos uma API key
-      if (!OPENAI_API_KEY) {
-        throw new Error('API key do OpenAI não configurada. Configure a variável de ambiente VITE_OPENAI_API_KEY.');
+      if (!apiKey) {
+        throw new Error('API key do OpenAI não configurada. Entre em contato com o administrador do sistema.');
       }
 
       logger.debug('OpenAIService: Gerando template de email com ChatGPT');
@@ -90,6 +131,7 @@ IMPORTANTE: Use todo seu potencial criativo! Queremos um design que realmente im
 `;
 
       // Fazer a requisição para a API do ChatGPT
+      logger.debug('OpenAIService: Enviando requisição para a API do OpenAI');
       const response = await axios.post(
         API_URL,
         {
@@ -104,10 +146,12 @@ IMPORTANTE: Use todo seu potencial criativo! Queremos um design que realmente im
         {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${OPENAI_API_KEY}`
+            'Authorization': `Bearer ${apiKey}`
           }
         }
       );
+      
+      logger.debug('OpenAIService: Resposta recebida da API do OpenAI');
 
       // Extrair o conteúdo HTML da resposta
       let htmlContent = response.data.choices[0].message.content;
