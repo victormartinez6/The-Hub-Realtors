@@ -1,36 +1,60 @@
 import axios, { AxiosError } from 'axios';
 import { SmtpConfig, SmtpTestResult } from '../models/SmtpConfig';
 import { db } from '../firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection } from 'firebase/firestore';
+import { useAuthStore } from '../stores/auth';
 
 // URL base da API - usando o servidor de desenvolvimento
 const API_URL = '/api';
 const STORAGE_KEY = 'smtp_config';
-const FIRESTORE_COLLECTION = 'settings';
-const FIRESTORE_DOC = 'smtp';
+const FIRESTORE_COLLECTION = 'user_smtp_settings'; // Coleção para configurações por usuário
+const GLOBAL_FIRESTORE_COLLECTION = 'settings';
+const GLOBAL_FIRESTORE_DOC = 'smtp';
 
 class SmtpService {
   async getConfig(): Promise<SmtpConfig> {
     try {
-      // Primeiro tentar obter do Firestore
-      const docRef = doc(db, FIRESTORE_COLLECTION, FIRESTORE_DOC);
-      const docSnap = await getDoc(docRef);
+      // Obter o ID do usuário atual
+      const authStore = useAuthStore();
+      const userId = authStore.user?.uid;
       
-      if (docSnap.exists()) {
-        const firestoreConfig = docSnap.data() as SmtpConfig;
-        console.log('Configurações SMTP obtidas do Firestore:', firestoreConfig);
-        
-        // Atualizar localStorage com dados do Firestore
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(firestoreConfig));
-        
-        return firestoreConfig;
+      if (!userId) {
+        console.warn('Usuário não autenticado, não é possível carregar configurações SMTP específicas');
+        return this.getDefaultConfig();
       }
-
-      // Se não houver no Firestore, tentar obter do localStorage
+      
+      console.log('%c[SMTP Service] Carregando configurações para o usuário:', 'color: #1976D2', userId);
+      
+      // Primeiro tentar obter as configurações específicas do usuário
+      const userDocRef = doc(db, FIRESTORE_COLLECTION, userId);
+      const userDocSnap = await getDoc(userDocRef);
+      
+      if (userDocSnap.exists()) {
+        const userConfig = userDocSnap.data() as SmtpConfig;
+        console.log('%c[SMTP Service] Configurações específicas do usuário encontradas:', 'color: #4CAF50', userConfig);
+        return userConfig;
+      }
+      
+      // Se não houver configurações específicas do usuário, tentar obter as configurações globais
+      console.log('%c[SMTP Service] Configurações do usuário não encontradas, buscando configurações globais', 'color: #FF9800');
+      const globalDocRef = doc(db, GLOBAL_FIRESTORE_COLLECTION, GLOBAL_FIRESTORE_DOC);
+      const globalDocSnap = await getDoc(globalDocRef);
+      
+      if (globalDocSnap.exists()) {
+        const globalConfig = globalDocSnap.data() as SmtpConfig;
+        console.log('%c[SMTP Service] Usando configurações globais como base:', 'color: #FF9800', globalConfig);
+        
+        // Salvar as configurações globais como configurações iniciais do usuário
+        await this.saveConfig(globalConfig);
+        
+        return globalConfig;
+      }
+      
+      // Se não houver no Firestore, tentar obter do localStorage (legado)
       const savedConfig = localStorage.getItem(STORAGE_KEY);
       if (savedConfig) {
         const localConfig = JSON.parse(savedConfig);
-        console.log('Configurações SMTP obtidas do localStorage:', localConfig);
+        console.log('%c[SMTP Service] Configurações obtidas do localStorage (legado):', 'color: #9C27B0', localConfig);
         
         // Salvar no Firestore para persistência
         await this.saveConfig(localConfig);
@@ -38,18 +62,7 @@ class SmtpService {
         return localConfig;
       }
 
-      // Fallback para valores padrão se não encontrar em nenhum lugar
-      const defaultConfig: SmtpConfig = {
-        host: '',
-        port: 587,
-        username: '',
-        password: '',
-        encryption: 'tls',
-        fromName: '',
-        fromEmail: ''
-      };
-      
-      return defaultConfig;
+      return this.getDefaultConfig();
     } catch (error) {
       this.handleError('obter configurações', error);
       throw error;
@@ -58,19 +71,36 @@ class SmtpService {
 
   async saveConfig(config: SmtpConfig): Promise<void> {
     try {
-      console.log('Salvando configurações SMTP:', config);
+      // Obter o ID do usuário atual
+      const authStore = useAuthStore();
+      const userId = authStore.user?.uid;
       
-      // Salvar no Firestore
-      const docRef = doc(db, FIRESTORE_COLLECTION, FIRESTORE_DOC);
-      await setDoc(docRef, config);
-      console.log('Configurações SMTP salvas no Firestore com sucesso');
+      if (!userId) {
+        console.error('%c[SMTP Service] Usuário não autenticado, não é possível salvar configurações', 'color: #F44336');
+        throw new Error('Usuário não autenticado');
+      }
       
-      // Salvar no localStorage como backup
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+      console.log('%c[SMTP Service] Salvando configurações SMTP para o usuário:', 'color: #1976D2', userId, config);
+      
+      // Adicionar metadados às configurações
+      const configWithMetadata = {
+        ...config,
+        userId,
+        updatedAt: new Date().toISOString()
+      };
+      
+      // Salvar no Firestore na coleção de configurações do usuário
+      const userDocRef = doc(db, FIRESTORE_COLLECTION, userId);
+      await setDoc(userDocRef, configWithMetadata);
+      console.log('%c[SMTP Service] Configurações SMTP salvas para o usuário com sucesso', 'color: #4CAF50');
+      
+      // Salvar no localStorage como backup (legado)
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(configWithMetadata));
       
       // Tentar salvar na API se estiver disponível
       try {
         const response = await axios.post(`${API_URL}/settings/smtp`, {
+          userId,
           host: config.host,
           port: Number(config.port),
           username: config.username,
@@ -79,9 +109,9 @@ class SmtpService {
           fromName: config.fromName,
           fromEmail: config.fromEmail
         });
-        console.log('Resposta da API ao salvar:', response.data);
+        console.log('%c[SMTP Service] Resposta da API ao salvar:', 'color: #2196F3', response.data);
       } catch (apiError) {
-        console.warn('API não disponível para salvar configurações SMTP, usando apenas Firestore');
+        console.warn('%c[SMTP Service] API não disponível para salvar configurações SMTP, usando apenas Firestore', 'color: #FF9800');
       }
     } catch (error) {
       this.handleError('salvar configurações', error);
@@ -152,11 +182,27 @@ class SmtpService {
     }
   }
 
-  private handleError(action: string, error: any) {
-    console.error(`Erro ao ${action} SMTP:`, error);
-    if (error instanceof AxiosError && error.response) {
-      console.error('Detalhes do erro:', error.response.data);
+  private handleError(action: string, error: any): void {
+    console.error(`%c[SMTP Service] Erro ao ${action} SMTP:`, 'color: #F44336', error);
+    if (error instanceof AxiosError) {
+      console.error('%c[SMTP Service] Detalhes do erro:', 'color: #F44336', error.response?.data);
     }
+  }
+  
+  private getDefaultConfig(): SmtpConfig {
+    // Configurações padrão vazias
+    const defaultConfig: SmtpConfig = {
+      host: '',
+      port: 587,
+      username: '',
+      password: '',
+      encryption: 'tls',
+      fromName: 'The Hub Realtors',
+      fromEmail: ''
+    };
+    
+    console.log('%c[SMTP Service] Usando configurações padrão', 'color: #607D8B', defaultConfig);
+    return defaultConfig;
   }
 }
 

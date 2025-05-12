@@ -190,7 +190,7 @@ const router = createRouter({
       path: '/marketing/mail',
       name: 'mailMarketing',
       component: () => import('../views/MailMarketing.vue'),
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true, allowedRoles: ['super_admin', 'admin', 'broker', 'realtor', 'partner', 'user'] }
     },
     {
       path: '/admin/update-menu-config',
