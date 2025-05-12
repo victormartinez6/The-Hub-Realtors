@@ -24,8 +24,8 @@ let SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || '';
 
 // Se não conseguir ler do arquivo .env, usar a API key diretamente
 if (!SENDGRID_API_KEY || !SENDGRID_API_KEY.startsWith('SG.')) {
-  console.log('API key não encontrada no arquivo .env ou formato inválido. Usando API key hardcoded para teste.');
-  SENDGRID_API_KEY = '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';
+  console.log('API key não encontrada no arquivo .env ou formato inválido.');
+  SENDGRID_API_KEY = 'SUA_API_KEY_AQUI'; // Placeholder para API key
 }
 
 console.log('API Key (primeiros 10 caracteres):', SENDGRID_API_KEY.substring(0, 10) + '...');

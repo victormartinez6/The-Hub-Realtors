@@ -162,5 +162,5 @@ class SendGridDirectService {
 
 export const sendgridDirectService = new SendGridDirectService();
 
-// Definir a API key para testes
-sendgridDirectService.setApiKey('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');
+// A API key deve ser configurada através do serviço de configuração
+// sendgridDirectService.setApiKey('SUA_API_KEY_AQUI');

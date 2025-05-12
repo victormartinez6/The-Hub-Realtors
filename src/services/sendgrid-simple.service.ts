@@ -23,7 +23,8 @@ export interface EmailResult {
 }
 
 class SendGridSimpleService {
-  private apiKey = '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';
+  // A chave deve ser obtida do serviço de configuração ou variável de ambiente
+  private apiKey = process.env.SENDGRID_API_KEY || '';
 
   /**
    * Envia um email usando diretamente a API do SendGrid

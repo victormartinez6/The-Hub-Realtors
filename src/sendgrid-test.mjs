@@ -2,7 +2,8 @@
 import sgMail from '@sendgrid/mail';
 
 // Configurar a API key do SendGrid
-const SENDGRID_API_KEY = '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';
+// A chave deve ser configurada como variável de ambiente ou em um arquivo .env
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || 'SUA_API_KEY_AQUI';
 sgMail.setApiKey(SENDGRID_API_KEY);
 
 // Email de teste - use o mesmo formato que o SendGrid recomenda

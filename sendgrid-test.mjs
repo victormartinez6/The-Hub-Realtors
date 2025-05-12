@@ -2,8 +2,10 @@
 // https://github.com/sendgrid/sendgrid-nodejs
 import sgMail from '@sendgrid/mail';
 
-// Usar a API key diretamente para o teste
-sgMail.setApiKey('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');
+// Configurar a API key do SendGrid
+// A chave deve ser configurada como variável de ambiente ou em um arquivo .env
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || 'SUA_API_KEY_AQUI';
+sgMail.setApiKey(SENDGRID_API_KEY);
 
 const msg = {
   to: 'test@example.com', // Change to your recipient
