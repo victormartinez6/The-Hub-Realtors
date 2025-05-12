@@ -2,7 +2,7 @@ import axios from 'axios';
 import { logger } from '../utils/logger';
 import { useAuthStore } from '../stores/auth';
 import { db } from '../firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 
 // URL base da API
 const API_URL = 'https://api.openai.com/v1/chat/completions';
@@ -15,6 +15,110 @@ const SYSTEM_SETTINGS_COLLECTION = 'system_settings';
 const API_KEYS_DOC = 'api_keys';
 
 class OpenAIService {
+  /**
+   * Verifica a configuração do OpenAI e retorna o status
+   * Util para diagnóstico e debug
+   */
+  /**
+   * Configura a chave da API do OpenAI no Firestore
+   * @param apiKey Chave da API do OpenAI
+   * @returns Resultado da operação
+   */
+  async configureOpenAIKey(apiKey: string): Promise<{success: boolean, message: string}> {
+    try {
+      if (!apiKey || apiKey.trim() === '') {
+        return {
+          success: false,
+          message: 'Chave da API inválida. Forneça uma chave válida.'
+        };
+      }
+      
+      logger.debug('OpenAIService: Configurando chave da API do OpenAI no Firestore');
+      
+      // Criar ou atualizar o documento no Firestore
+      const apiKeysDocRef = doc(db, SYSTEM_SETTINGS_COLLECTION, API_KEYS_DOC);
+      
+      // Verificar se o documento já existe
+      const apiKeysDoc = await getDoc(apiKeysDocRef);
+      
+      if (apiKeysDoc.exists()) {
+        // Atualizar o documento existente
+        await updateDoc(apiKeysDocRef, {
+          openai: apiKey,
+          updatedAt: new Date().toISOString()
+        });
+      } else {
+        // Criar um novo documento
+        await setDoc(apiKeysDocRef, {
+          openai: apiKey,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+      }
+      
+      logger.debug('OpenAIService: Chave da API do OpenAI configurada com sucesso');
+      
+      return {
+        success: true,
+        message: 'Chave da API do OpenAI configurada com sucesso'
+      };
+    } catch (error) {
+      logger.error('OpenAIService: Erro ao configurar chave da API do OpenAI:', error);
+      
+      return {
+        success: false,
+        message: `Erro ao configurar chave da API do OpenAI: ${error.message || 'Erro desconhecido'}`
+      };
+    }
+  }
+  
+  /**
+   * Verifica a configuração do OpenAI e retorna o status
+   * Util para diagnóstico e debug
+   */
+  async checkOpenAIConfig(): Promise<{success: boolean, message: string, details: any}> {
+    try {
+      // Verificar variáveis de ambiente
+      const envApiKey = import.meta.env.VITE_OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
+      
+      // Verificar configuração no Firestore
+      const apiKeysDocRef = doc(db, SYSTEM_SETTINGS_COLLECTION, API_KEYS_DOC);
+      const apiKeysDoc = await getDoc(apiKeysDocRef);
+      
+      const result: any = {
+        envApiKeyExists: !!envApiKey,
+        firestoreDocExists: apiKeysDoc.exists(),
+        firestoreData: null,
+        openaiKeyInFirestore: false
+      };
+      
+      if (apiKeysDoc.exists()) {
+        const data = apiKeysDoc.data();
+        // Ocultar a chave real por segurança, mas mostrar se existe
+        result.firestoreData = Object.keys(data).reduce((acc, key) => {
+          acc[key] = typeof data[key] === 'string' ? `${data[key].substring(0, 5)}...` : data[key];
+          return acc;
+        }, {});
+        result.openaiKeyInFirestore = !!data.openai;
+      }
+      
+      const success = result.envApiKeyExists || result.openaiKeyInFirestore;
+      
+      return {
+        success,
+        message: success ? 'Configuração do OpenAI encontrada' : 'Configuração do OpenAI não encontrada',
+        details: result
+      };
+    } catch (error) {
+      logger.error('OpenAIService: Erro ao verificar configuração do OpenAI:', error);
+      return {
+        success: false,
+        message: `Erro ao verificar configuração do OpenAI: ${error.message || 'Erro desconhecido'}`,
+        details: { error: error.toString() }
+      };
+    }
+  }
+  
   /**
    * Busca a chave da API do OpenAI
    * Tenta buscar da variável de ambiente primeiro, depois do Firestore
@@ -34,12 +138,20 @@ class OpenAIService {
       const apiKeysDocRef = doc(db, SYSTEM_SETTINGS_COLLECTION, API_KEYS_DOC);
       const apiKeysDoc = await getDoc(apiKeysDocRef);
       
+      logger.debug(`OpenAIService: Documento do Firestore existe? ${apiKeysDoc.exists()}`);
+      
       if (apiKeysDoc.exists()) {
         const data = apiKeysDoc.data();
+        logger.debug(`OpenAIService: Dados do documento: ${JSON.stringify(Object.keys(data))}`);
+        
         if (data.openai) {
           logger.debug('OpenAIService: API key do OpenAI encontrada no Firestore');
           return data.openai;
+        } else {
+          logger.warn('OpenAIService: Campo "openai" não encontrado no documento do Firestore');
         }
+      } else {
+        logger.warn(`OpenAIService: Documento "${API_KEYS_DOC}" não encontrado na coleção "${SYSTEM_SETTINGS_COLLECTION}"`);
       }
       
       // Se chegou aqui, não encontrou a chave
